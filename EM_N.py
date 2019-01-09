@@ -185,3 +185,5 @@ elif states == 4:
     pltm.plotQuad(range(sims), ps[0,:], ps[5,:], ps[10,:], ps[15,:], 'Trials', 'p11', 'p22', 'p33', 'p44', 'Probability')
 
 pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
+
+# Generalise plots
