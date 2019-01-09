@@ -48,7 +48,7 @@ def aFct(mat, states, f, p):
 
     # t in [1, T]
     for t in range(1, mat):
-        a[:, t]   = [f[i][t] * sum([p[s * states + i] * a_r[s, t-1] for s in range(states)]) for i in range(states)]
+        a[:, t]   = [f[j][t] * sum([p[i * states + j] * a_r[i, t-1] for i in range(states)]) for j in range(states)]
         a_s[t]    = sum(a[:, t])
         a_r[:, t] = a[:,t] / a_s[t]
 
@@ -99,26 +99,27 @@ def logLikFct(vol, p, pStar, pStarT):
 # ============================================= #
 
 # 0. Load S&P 500 data
-#sp500 = pd.read_excel('C:/Users/wigr11ab/Dropbox/KU/K3/FE/Exercises/SP500.xlsx')
-#d     = np.array(sp500['Date'][15096:], dtype = 'datetime64[D]')
-#y     = np.array(sp500['log-ret_x100'][15096:]) # returns
+# sp500 = pd.read_excel('C:/Users/wigr11ab/Dropbox/KU/K3/FE/Exercises/SP500.xlsx')
+# d     = np.array(sp500['Date'][15096:], dtype = 'datetime64[D]')
+# y     = np.array(sp500['log-ret_x100'][15096:]) # returns
 
 sbl = '^GSPC'
-bgn = '1976-01-01'
-end = '2000-12-31'
+bgn = '2010-01-01'
+end = '2015-09-17'
 src = 'yahoo'
 
-sp500 = web.DataReader(sbl, src, bgn, end)['Close'].to_frame().resample('MS').mean().round()
+sp500 = web.DataReader(sbl, src, bgn, end)['Close'].to_frame()
+# sp500 = web.DataReader(sbl, src, bgn, end)['Close'].to_frame().resample('MS').mean().round() # Monthly
 close = np.array(sp500['Close'])
 d     = np.array(sp500.index, dtype = 'datetime64[D]')[1:]
 mat   = len(close)
-y = (np.log(close[1:]) - np.log(close[:mat-1])) * 100
+y     = (np.log(close[1:]) - np.log(close[:mat-1])) * 100
 
 # 1. Set initial parameters
 
 mat      = len(y)
-states   = 3
-sims     = 10000
+states   = 2
+sims     = 500
 llh      = np.zeros(sims)
 
 # store variances and probabilities

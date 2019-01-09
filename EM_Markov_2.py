@@ -112,7 +112,7 @@ def logLikFct(s1, s2, p11, p22, pStar, pStarT):
 # ============================================= #
 
 # 0. Load S&P 500 data
-sp500 = pd.DataFrame(pd.read_excel('C:/Users/wigr11ab/Dropbox/KU/K3/FE/Exercises/SP500.xlsx'))
+sp500 = pd.DataFrame(pd.read_excel('/home/william/Dropbox/KU/K4/Python/SP500.xlsx'))
 y     = np.array(sp500['log-ret_x100'][15096:]) # returns
 
 # 1. Set initial parameters
