@@ -37,7 +37,7 @@ def pFct(pStarT, states):
 
 # A. Forward algorithm
 def aFct(mat, states, f, p):
-    a   = [f[i][0] / mat for i in range(states)]
+    a   = [f[i][0] / states for i in range(states)]  # v_j = 1/N, N = states.
     a   = np.repeat(a, mat).reshape(states, mat)
     a_s = np.ones(mat)                               # a_scale
     a_r = np.ones(states * mat).reshape(states, mat) # a_rescale
