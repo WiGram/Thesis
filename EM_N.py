@@ -115,6 +115,8 @@ d     = np.array(sp500.index, dtype = 'datetime64[D]')[1:]
 mat   = len(close)
 y     = (np.log(close[1:]) - np.log(close[:mat-1])) * 100
 
+rfConst = [0.02] * len()
+
 # 1. Set initial parameters
 
 mat      = len(y)
@@ -188,3 +190,4 @@ elif states == 4:
 pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
 
 # Generalise plots
+
