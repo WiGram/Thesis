@@ -128,47 +128,43 @@ d     = np.array(close.index, dtype = 'datetime64[D]')[1:]
 mat   = len(prices[:,0])
 y     = np.array([(np.log(prices[1:,i]) - np.log(prices[:mat-1,i])) * 100 for i in range(len(sbl))])
 
-rfConst = [0.02] * len()
+returns = y # will need for generating the dynamic function later..
+
+states   = 3
+assets   = len(sbl)
+sims     = 1000
 
 # 1. Set initial parameters
-
-mat      = len(y)
-states   = 3
-sims     = 1000
+# def runEstimation(returns, sims, states):
+mat      = len(returns[0,:])
 llh      = np.zeros(sims)
 
 # store variances and probabilities
-vs       = np.zeros(states * sims).reshape(states, sims)
-ms       = np.zeros(states * sims).reshape(states, sims)
-ps       = np.zeros(states * states * sims). reshape(states * states, sims)
+vs       = np.zeros(states * sims).reshape(states, sims) # Needs to be fixed
+ms       = np.zeros(states * sims).reshape(states, sims) # Needs to be fixed
+ps       = np.zeros(states * states * sims).reshape(states * states, sims) # Needs to be fixed
 
 # var won't work with e.g. np.ones(states), hence the "weird" construction
-mu  = 0. + np.random.uniform(size = states)
-var = 1. + np.random.uniform(size = states)
+pStarRandom = np.random.uniform(size = mat * states).reshape(states, mat)
+
+mu  = muFct(pStarRandom, returns, states)
+var = varFct(pStarRandom, returns, mu, states)
 p   = np.repeat(1.0 / states, states * states)
 
-f       = fFct(y, mu, var, states)
+f       = fFct(returns, mu, var, states)
 
 a_r, a_s = aFct(mat, states, f, p)
 b_r      = bFct(mat, states, f, p)
 
 pStar    = pStarFct(mat, states, a_r, b_r)
 pStarT   = pStarTFct(mat, states, a_r, a_s, b_r, p)
-# Initial checks that all is OK
-'OK: Minimum is weakly larger than 0' if min([min(pStar[i,:]) >= 0.0 for i in range(states)])                     else 'Error: Minimum is less than zero'
-'OK: Maximum is weakly less than 1'   if min([max(pStar[i,:]) <= 1.0 for i in range(states)])                     else 'Error: Maximum is larger than 1'
-'OK: Probabilities sum to 1'          if min(np.round(sum([pStar[i,:] for i in range(states)]), 10) == 1.0)       else "Error: Probabilities don't sum to 1"
-'OK: Minimum is weakly larger than 0' if min([min(pStarT[i,:]) >= 0.0 for i in range(states ** 2)])               else 'Error: Minimum is less than zero'
-'OK: Maximum is weakly less than 1'   if min([max(pStarT[i,:]) <= 1.0 for i in range(states ** 2)])               else 'Error: Maximum is larger than 1'
-'OK: Probabilities sum to 1'          if min(np.round(sum([pStarT[i,:] for i in range(states ** 2)]), 10) == 1.0) else "Error: Probabilities don't sum to 1"
-
 
 # 3. EM-loop until convergence (we loop sims amount of times)
 for m in range(sims):
     # Reevaluate parameters given pStar    
-    mu   = muFct(pStar, y, states)
-    var  = varFct(pStar, y, mu, states)
-    f    = fFct(y, mu, var, states)
+    mu   = muFct(pStar, returns, states)
+    var  = varFct(pStar, returns, mu, states)
+    f    = fFct(returns, mu, var, states)
     p    = pFct(pStarT, states)
 
     # New smoothed probabilities
@@ -186,6 +182,10 @@ for m in range(sims):
     vs[:, m] = var
     ps[:, m] = p
     llh[m] = logLik
+
+    # return np.array(vs, ms, ps, llh, pStar, pStarT)
+
+# test = runEstimation(y, sims, states)
 
 # ============================================= #
 # ===== Plotting ============================== #
