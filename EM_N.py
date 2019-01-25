@@ -18,15 +18,19 @@ np.set_printoptions(suppress = True)   # Disable scientific notation
 # ===== Initial functions ===================== #
 # ============================================= #
 
-# Output is f1, f2, ..., fN; vol must be an array of all volatilities
-def fFct(returns, vol):
-    f = [1 / np.sqrt(2 * np.pi * v) * np.exp(-0.5 * returns ** 2 / v) for v in vol]
+# Output is f1, f2, ..., fN; var, mu must be arrays of parameters (i.e. for each state)
+def fFct(returns, mu, var, states):
+    f = [1 / np.sqrt(2 * np.pi * var[s]) * np.exp(-0.5 * (returns - mu[s]) ** 2 / var[s]) for s in range(states)]
     return np.array(f)
 
 # Output: v1^2, v2^2, ..., vN^2
-def varFct(pStar, returns, states):
-    s = [sum(pStar[s, :] * returns ** 2) / sum(pStar[s, :]) for s in range(states)]
-    return np.array(s)
+def varFct(pStar, returns, mu, states):
+    var = [sum(pStar[s, :] * (returns - mu[s]) ** 2) / sum(pStar[s, :]) for s in range(states)]
+    return np.array(var)
+
+def muFct(pStar, returns, states):
+    mu = [sum(pStar[s, :] * returns) / sum(pStar[s, :]) for s in range(states)]
+    return np.array(mu)
 
 # Output: p11, p12, ..., p1N, p21, p22, ..., p2N, ..., pN1, pN2, ..., pNN
 def pFct(pStarT, states):
@@ -88,10 +92,10 @@ def pStarTFct(mat, states, a_r, a_s, b_r, p):
     return np.array(pStarT)
 
 # E. Expected log-likelihood function to maximise
-def logLikFct(vol, p, pStar, pStarT):
+def logLikFct(mu, var, p, pStar, pStarT):
     k = -0.5 * (np.log(2 * np.pi) + 1.0)  # the constant 'c' is set to 1.0
     a = sum([sum([np.log(p[s * states + i]) * sum(pStarT[s * states + i, 1:]) for i in range(states)]) for s in range(states)])
-    b = sum([-0.5 * sum(pStar[s, :] * (np.log(vol[s]) + y ** 2 / vol[s])) for s in range(states)])
+    b = sum([-0.5 * sum(pStar[s, :] * (np.log(var[s]) + (y -mu[s]) ** 2 / var[s])) for s in range(states)])
     return k + a + b
 
 # ============================================= #
@@ -120,19 +124,21 @@ rfConst = [0.02] * len()
 # 1. Set initial parameters
 
 mat      = len(y)
-states   = 2
-sims     = 500
+states   = 3
+sims     = 1000
 llh      = np.zeros(sims)
 
 # store variances and probabilities
 vs       = np.zeros(states * sims).reshape(states, sims)
+ms       = np.zeros(states * sims).reshape(states, sims)
 ps       = np.zeros(states * states * sims). reshape(states * states, sims)
 
 # var won't work with e.g. np.ones(states), hence the "weird" construction
+mu  = 0. + np.random.uniform(size = states)
 var = 1. + np.random.uniform(size = states)
 p   = np.repeat(1.0 / states, states * states)
 
-f       = fFct(y, var)
+f       = fFct(y, mu, var, states)
 
 a_r, a_s = aFct(mat, states, f, p)
 b_r      = bFct(mat, states, f, p)
@@ -151,8 +157,9 @@ pStarT   = pStarTFct(mat, states, a_r, a_s, b_r, p)
 # 3. EM-loop until convergence (we loop sims amount of times)
 for m in range(sims):
     # Reevaluate parameters given pStar    
-    var  = varFct(pStar, y, states)
-    f    = fFct(y, var)
+    mu   = muFct(pStar, y, states)
+    var  = varFct(pStar, y, mu, states)
+    f    = fFct(y, mu, var, states)
     p    = pFct(pStarT, states)
 
     # New smoothed probabilities
@@ -163,9 +170,10 @@ for m in range(sims):
     pStarT = pStarTFct(mat, states, a_r, a_s, b_r, p)
     
     # Compute the log-likelihood to maximise
-    logLik = logLikFct(var, p, pStar, pStarT)
+    logLik = logLikFct(mu, var, p, pStar, pStarT)
 
     # Save parameters for later plotting (redundant wrt optimisation)
+    ms[:,m]  = mu
     vs[:, m] = var
     ps[:, m] = p
     llh[m] = logLik
@@ -176,16 +184,23 @@ for m in range(sims):
 
 if states == 2:
     pltm.plotDuo(range(sims), vs[0,:], vs[1,:], 'Var_1', 'Var_2', 'Trials', 'Variance')
+    pltm.plotDuo(range(sims), ms[0,:], ms[1,:], 'Mu_1', 'Mu_2', 'Trials', 'Mean return')
     pltm.plotDuo(range(sims), ps[0,:], ps[3,:], 'p11', 'p22', 'Trials', 'Probability')
 elif states == 3:
     pltm.plotTri(range(sims), vs[0,:], vs[1,:], vs[2,:], 'Trials', 'Var_1', 'Var_2', 'Var_3', 'Variance')
+    pltm.plotTri(range(sims), ms[0,:], ms[1,:], ms[2,:], 'Trials', 'Mu_1', 'Mu_2', 'Mu_3', 'Mean return')
     pltm.plotTri(range(sims), ps[0,:], ps[4,:], ps[8,:], 'Trials', 'p11', 'p22', 'p33', 'Probability')
     pltm.plotUno(d, pStar[0,:], xLab = 'Time', yLab = 'p1', title = 'Smoothed State Probabilities')
     pltm.plotUno(d, pStar[1,:], xLab = 'Time', yLab = 'p2', title = 'Smoothed State Probabilities')
     pltm.plotUno(d, pStar[2,:], xLab = 'Time', yLab = 'p3', title = 'Smoothed State Probabilities')
 elif states == 4:
     pltm.plotQuad(range(sims), vs[0,:], vs[1,:], vs[2,:], vs[3,:], 'Trials', 'Var_1', 'Var_2', 'Var_3', 'Var_4', 'Variance')
+    pltm.plotQuad(range(sims), ms[0,:], ms[1,:], ms[2,:], ms[3,:], 'Trials', 'Mu_1', 'Mu_2', 'Mu_3', 'Mu_4', 'Mean return')
     pltm.plotQuad(range(sims), ps[0,:], ps[5,:], ps[10,:], ps[15,:], 'Trials', 'p11', 'p22', 'p33', 'p44', 'Probability')
+    pltm.plotUno(d, pStar[0,:], xLab = 'Time', yLab = 'p1', title = 'Smoothed State Probabilities')
+    pltm.plotUno(d, pStar[1,:], xLab = 'Time', yLab = 'p2', title = 'Smoothed State Probabilities')
+    pltm.plotUno(d, pStar[2,:], xLab = 'Time', yLab = 'p3', title = 'Smoothed State Probabilities')
+    pltm.plotUno(d, pStar[3,:], xLab = 'Time', yLab = 'p4', title = 'Smoothed State Probabilities')
 
 pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
 
