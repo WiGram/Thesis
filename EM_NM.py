@@ -121,7 +121,7 @@ def logLikFct(returns, mu, covm, p, pStar, pStarT):
 # d     = np.array(sp500['Date'][15096:], dtype = 'datetime64[D]')
 # y     = np.array(sp500['log-ret_x100'][15096:]) # returns
 
-sbl = ['^GSPC','AAPL']
+sbl = ['AAPL','DJP','HYG','VBMFX','^GSPC'] # S&P to be last (possibly due to '^')
 bgn = '2010-01-01'
 end = '2015-09-17'
 src = 'yahoo'
@@ -204,10 +204,16 @@ if states == 2:
     pltm.plotDuo(range(sims), ps[0,:], ps[3,:], 'p11', 'p22', 'Trials', 'Probability')
 elif states == 3:
     # vs: vs[m, s, asset, asset] -> covariance for vs[m, s, 0, 1] or vs[m, s, 1, 0]
-    pltm.plotTri(range(sims), vs[:,0,0,0], vs[:, 1, 0, 0], vs[:, 2, 0, 0], 'Trials', 'Var_1', 'Var_2', 'Var_3', 'Variance', title = ('Variance of %s' % sbl[1]))
-    pltm.plotTri(range(sims), vs[:,0,1,1], vs[:, 1, 1, 1], vs[:, 2, 1, 1], 'Trials', 'Var_1', 'Var_2', 'Var_3', 'Variance', title = ('Variance of %s' % sbl[0]))
-    pltm.plotTri(range(sims), ms[:, 0, 0], ms[:, 0, 1], ms[:, 0, 2], 'Trials', 'Mu_1', 'Mu_2', 'Mu_3', 'Mean return', title = ('Mean of %s' % sbl[1]))
-    pltm.plotTri(range(sims), ms[:, 1, 0], ms[:, 1, 1], ms[:, 1, 2], 'Trials', 'Mu_1', 'Mu_2', 'Mu_3', 'Mean return', title = ('Mean of %s' % sbl[0]))
+    pltm.plotTri(range(sims), vs[:,0,0,0], vs[:, 1, 0, 0], vs[:, 2, 0, 0], 'Trials', 'Var_1', 'Var_2', 'Var_3', 'Variance', title = ('Variance of %s' % sbl[0]))
+    pltm.plotTri(range(sims), vs[:,0,1,1], vs[:, 1, 1, 1], vs[:, 2, 1, 1], 'Trials', 'Var_1', 'Var_2', 'Var_3', 'Variance', title = ('Variance of %s' % sbl[1]))
+    pltm.plotTri(range(sims), vs[:,0,2,2], vs[:, 1, 2, 2], vs[:, 2, 2, 2], 'Trials', 'Var_1', 'Var_2', 'Var_3', 'Variance', title = ('Variance of %s' % sbl[2]))
+    pltm.plotTri(range(sims), vs[:,0,3,3], vs[:, 1, 3, 3], vs[:, 2, 3, 3], 'Trials', 'Var_1', 'Var_2', 'Var_3', 'Variance', title = ('Variance of %s' % sbl[3]))
+    pltm.plotTri(range(sims), vs[:,0,3,3], vs[:, 1, 4, 4], vs[:, 2, 4, 4], 'Trials', 'Var_1', 'Var_2', 'Var_3', 'Variance', title = ('Variance of %s' % sbl[4]))
+    pltm.plotTri(range(sims), ms[:, 0, 0], ms[:, 0, 1], ms[:, 0, 2], 'Trials', 'Mu_1', 'Mu_2', 'Mu_3', 'Mean return', title = ('Mean of %s' % sbl[0]))
+    pltm.plotTri(range(sims), ms[:, 1, 0], ms[:, 1, 1], ms[:, 1, 2], 'Trials', 'Mu_1', 'Mu_2', 'Mu_3', 'Mean return', title = ('Mean of %s' % sbl[1]))
+    pltm.plotTri(range(sims), ms[:, 2, 0], ms[:, 2, 1], ms[:, 2, 2], 'Trials', 'Mu_1', 'Mu_2', 'Mu_3', 'Mean return', title = ('Mean of %s' % sbl[2]))
+    pltm.plotTri(range(sims), ms[:, 3, 0], ms[:, 3, 1], ms[:, 3, 2], 'Trials', 'Mu_1', 'Mu_2', 'Mu_3', 'Mean return', title = ('Mean of %s' % sbl[3]))
+    pltm.plotTri(range(sims), ms[:, 4, 0], ms[:, 4, 1], ms[:, 4, 2], 'Trials', 'Mu_1', 'Mu_2', 'Mu_3', 'Mean return', title = ('Mean of %s' % sbl[4]))
     pltm.plotTri(range(sims), ps[:,0,0], ps[:, 1, 1], ps[:, 2, 2], 'Trials', 'p11', 'p22', 'p33', 'Probability')
     pltm.plotUno(d, pStar[0,:], xLab = 'Time', yLab = 'p1', title = 'Smoothed State Probabilities')
     pltm.plotUno(d, pStar[1,:], xLab = 'Time', yLab = 'p2', title = 'Smoothed State Probabilities')
