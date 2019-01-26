@@ -20,23 +20,23 @@ np.set_printoptions(suppress = True)   # Disable scientific notation
 # ============================================= #
 
 # Output is f1, f2, ..., fN; var, mu must be arrays of parameters (i.e. for each state)
-@jit
+#@jit
 def muFct(pStar, returns, states):
-    # mu = [np.sum(pStar[s, :] * returns[i,:]) / np.sum(pStar[s, :]) for s in range(states) for i in range(len(returns[:,0]))] # further inspection
-    mu1 = [np.sum(pStar[s, :] * returns[0,:]) / np.sum(pStar[s, :]) for s in range(states)]
-    mu2 = [np.sum(pStar[s, :] * returns[1,:]) / np.sum(pStar[s, :]) for s in range(states)]
+    # mu = [sum(pStar[s, :] * returns[i,:]) / sum(pStar[s, :]) for s in range(states) for i in range(len(returns[:,0]))] # further inspection
+    mu1 = [sum(pStar[s, :] * returns[0,:]) / sum(pStar[s, :]) for s in range(states)]
+    mu2 = [sum(pStar[s, :] * returns[1,:]) / sum(pStar[s, :]) for s in range(states)]
     return np.array([mu1, mu2])
 
 # Output: v1^2, v2^2, ..., vN^2
-@jit
+#@jit
 def varFct(pStar, returns, mu, states):
-    var1 = [np.sum(pStar[s, :] * (returns[0,:] - mu[0,s]) ** 2) / np.sum(pStar[s, :]) for s in range(states)]
-    var2 = [np.sum(pStar[s, :] * (returns[1,:] - mu[1,s]) ** 2) / np.sum(pStar[s, :]) for s in range(states)]
-    cov  = [np.sum(pStar[s, :] * (returns[0,:] - mu[0,s]) * (returns[1,:] - mu[1,s])) / np.sum(pStar[s, :]) for s in range(states)]
+    var1 = [sum(pStar[s, :] * (returns[0,:] - mu[0,s]) ** 2) / sum(pStar[s, :]) for s in range(states)]
+    var2 = [sum(pStar[s, :] * (returns[1,:] - mu[1,s]) ** 2) / sum(pStar[s, :]) for s in range(states)]
+    cov  = [sum(pStar[s, :] * (returns[0,:] - mu[0,s]) * (returns[1,:] - mu[1,s])) / sum(pStar[s, :]) for s in range(states)]
     covm = [ np.array([[var1[s],cov[s]], [cov[s],var2[s]]]) for s in range(states)]
     return np.array(covm)
 
-@jit
+#@jit
 def fFct(returns, mu, covm, states):
     det             = np.linalg.det(covm) # returns [det1, det2, ..., detN]
     demeanedReturns = np.array([ np.array([ returns[0,:] - mu[0,s], 
@@ -45,15 +45,15 @@ def fFct(returns, mu, covm, states):
     return np.array(f)
 
 # Output: p11, p12, ..., p1N, p21, p22, ..., p2N, ..., pN1, pN2, ..., pNN
-@jit
+#@jit
 def pFct(pStarT, states):
     n   = states
-    den = [np.sum([np.sum(pStarT[s * n + i,:]) for i in range(states)]) for s in range(states)]
-    p   = [np.sum(pStarT[s * n + i,:]) / den[s] for s in range(states) for i in range(states)]
+    den = [sum([sum(pStarT[s * n + i,:]) for i in range(states)]) for s in range(states)]
+    p   = [sum(pStarT[s * n + i,:]) / den[s] for s in range(states) for i in range(states)]
     return np.array(p)
 
 # A. Forward algorithm
-@jit
+#@jit
 def aFct(mat, states, f, p):
     a   = [f[i][0] / states for i in range(states)]  # v_j = 1/N, N = states.
     a   = np.repeat(a, mat).reshape(states, mat)
@@ -61,60 +61,60 @@ def aFct(mat, states, f, p):
     a_r = np.ones(states * mat).reshape(states, mat) # a_rescale
 
     # t = 0
-    a_s[0]    = np.sum(a[:,0])
+    a_s[0]    = sum(a[:,0])
     a_r[:, 0] = a[:,0] / a_s[0]
 
     # t in [1, T]
     for t in range(1, mat):
-        a[:, t]   = [f[t,s] * np.sum([p[S * states + s] * a_r[S, t-1] for S in range(states)]) for s in range(states)]
-        a_s[t]    = np.sum(a[:, t])
+        a[:, t]   = [f[t,s] * sum([p[S * states + s] * a_r[S, t-1] for S in range(states)]) for s in range(states)]
+        a_s[t]    = sum(a[:, t])
         a_r[:, t] = a[:,t] / a_s[t]
 
     return np.array(a_r), np.array(a_s)
 
 # B. Backward algorithm
-@jit
+#@jit
 def bFct(mat, states, f, p):    
     b   = np.ones(states * mat).reshape(states, mat)
     b_s = np.ones(mat)                               # b_scale
     b_r = np.ones(states * mat).reshape(states, mat) # b_rescale
 
     # t = T (= mat - 1)
-    b_s[mat-1]      = np.sum(b[:, mat - 1])
+    b_s[mat-1]      = sum(b[:, mat - 1])
     b_r[:, mat - 1] = b[:, mat - 1] / b_s[mat - 1]
 
     # t in [0, T - 1] (= mat - 2, stops at previous index, i.e. 0)
     for t in range(mat - 2, -1, -1):
-        b[:, t]   = [np.sum([b_r[S, t+1] * f[t+1,S] * p[s * states + S] for S in range(states)]) for s in range(states)]
-        b_s[t]    = np.sum(b[:,t])
+        b[:, t]   = [sum([b_r[S, t+1] * f[t+1,S] * p[s * states + S] for S in range(states)]) for s in range(states)]
+        b_s[t]    = sum(b[:,t])
         b_r[:, t] = b[:, t] / b_s[t]
 
     return np.array(b_r)
 
 # Output (smoothed) p1, p2, ..., pN
-@jit
+#@jit
 def pStarFct(mat, states, a_r, b_r):
-    den   = np.sum([b_r[s, :] * a_r[s, :] for s in range(states)])
+    den   = sum([b_r[s, :] * a_r[s, :] for s in range(states)])
     pStar = [b_r[s, :] * a_r[s,:] / den for s in range(states)]
     return np.array(pStar)
 
 # Output (smoothed transition) p11, p12, ..., p1N, p21, p22, ..., p2N, pN1, pN2, ..., pNN
-@jit
+#@jit
 def pStarTFct(f, mat, states, a_r, a_s, b_r, p):
     pStarT = np.ones(states * states * mat).reshape(states * states, mat)
 
-    den   = np.sum([b_r[s, :] * a_r[s, :] for s in range(states)]) * a_s
+    den   = sum([b_r[s, :] * a_r[s, :] for s in range(states)]) * a_s
     pStarT[:, 0] = p / states
     pStarT[:, 1:] = [b_r[s, 1:] * f[1:,s] * p[S * states + s] * a_r[S, :mat - 1] / den[1:] for S in range(states) for s in range(states)]
     return np.array(pStarT)
 
 # E. Expected log-likelihood function to maximise
-@jit
+#@jit
 def logLikFct(returns, mu, covm, p, pStar, pStarT):
     f = fFct(returns, mu, covm, states)
     k = -0.5 * (np.log(2 * np.pi) + 1.0)  # the constant 'c' is set to 1.0
-    a = np.sum([np.sum([np.log(p[s * states + S]) * np.sum(pStarT[s * states + S, 1:]) for S in range(states)]) for s in range(states)])
-    b = np.sum([-0.5 * np.sum(pStar[s, :] * f[:, s]) for s in range(states)])
+    a = sum([sum([np.log(p[s * states + S]) * sum(pStarT[s * states + S, 1:]) for S in range(states)]) for s in range(states)])
+    b = sum([-0.5 * sum(pStar[s, :] * f[:, s]) for s in range(states)])
     return k + a + b
 
 
@@ -140,7 +140,7 @@ d       = np.array(close.index, dtype = 'datetime64[D]')[1:]
 mat     = len(prices[:,0])
 returns = np.array([(np.log(prices[1:,i]) - np.log(prices[:mat-1,i])) * 100 for i in range(len(sbl))])
 
-sims     = 50
+sims     = 300
 states   = 3
 assets   = len(sbl)
 
@@ -228,6 +228,7 @@ elif states == 4:
     pltm.plotUno(d, pStar[3,:], xLab = 'Time', yLab = 'p4', title = 'Smoothed State Probabilities')
 
 pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
+
 
 # Generalise plots
 

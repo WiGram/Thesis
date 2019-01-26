@@ -19,18 +19,18 @@ np.set_printoptions(suppress = True)   # Disable scientific notation
 # ============================================= #
 
 # Output is f1, f2, ..., fN; var, mu must be arrays of parameters (i.e. for each state)
-def fFct(returns, mu, var, states):
-    f = [1 / np.sqrt(2 * np.pi * var[s]) * np.exp(-0.5 * (returns - mu[s]) ** 2 / var[s]) for s in range(states)]
-    return np.array(f)
+def muFct(pStar, returns, states):
+    mu = [sum(pStar[s, :] * returns) / sum(pStar[s, :]) for s in range(states)]
+    return np.array(mu)
 
 # Output: v1^2, v2^2, ..., vN^2
 def varFct(pStar, returns, mu, states):
     var = [sum(pStar[s, :] * (returns - mu[s]) ** 2) / sum(pStar[s, :]) for s in range(states)]
     return np.array(var)
 
-def muFct(pStar, returns, states):
-    mu = [sum(pStar[s, :] * returns) / sum(pStar[s, :]) for s in range(states)]
-    return np.array(mu)
+def fFct(returns, mu, var, states):
+    f = [1 / np.sqrt(2 * np.pi * var[s]) * np.exp(-0.5 * (returns - mu[s]) ** 2 / var[s]) for s in range(states)]
+    return np.array(f)
 
 # Output: p11, p12, ..., p1N, p21, p22, ..., p2N, ..., pN1, pN2, ..., pNN
 def pFct(pStarT, states):
