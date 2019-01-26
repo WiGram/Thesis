@@ -37,7 +37,7 @@ def fFct(returns, mu, covm, states):
     det             = np.linalg.det(covm) # returns [det1, det2, ..., detN]
     demeanedReturns = np.array([ np.array([ returns[0,:] - mu[0,s], 
                                             returns[1,:] - mu[1,s]  ]) for s in range(states)])
-    f = [np.array([1 / np.sqrt( (2 * np.pi) ** 2 * det[s]) * np.exp(-0.5 * demeanedReturns[s,:,t].dot(np.linalg.inv(covm[s])).dot(demeanedReturns[s,:,t])) for s in range(states)]) for t in range(mat-1)]
+    f = [np.array([1 / np.sqrt( (2 * np.pi) ** 2 * det[s]) * np.exp(-0.5 * demeanedReturns[s,:,t].dot(np.linalg.inv(covm[s])).dot(demeanedReturns[s,:,t])) for s in range(states)]) for t in range(mat)]
     return np.array(f)
 
 # Output: p11, p12, ..., p1N, p21, p22, ..., p2N, ..., pN1, pN2, ..., pNN
@@ -60,7 +60,7 @@ def aFct(mat, states, f, p):
 
     # t in [1, T]
     for t in range(1, mat):
-        a[:, t]   = [f[j][t] * sum([p[i * states + j] * a_r[i, t-1] for i in range(states)]) for j in range(states)]
+        a[:, t]   = [f[t,s] * sum([p[S * states + s] * a_r[S, t-1] for S in range(states)]) for s in range(states)]
         a_s[t]    = sum(a[:, t])
         a_r[:, t] = a[:,t] / a_s[t]
 
@@ -78,7 +78,7 @@ def bFct(mat, states, f, p):
 
     # t in [0, T - 1] (= mat - 2, stops at previous index, i.e. 0)
     for t in range(mat - 2, -1, -1):
-        b[:, t]   = [sum([b_r[s, t+1] * f[s][t+1] * p[i * states + s] for s in range(states)]) for i in range(states)]
+        b[:, t]   = [sum([b_r[S, t+1] * f[t+1,S] * p[s * states + S] for S in range(states)]) for s in range(states)]
         b_s[t]    = sum(b[:,t])
         b_r[:, t] = b[:, t] / b_s[t]
 
@@ -96,13 +96,13 @@ def pStarTFct(mat, states, a_r, a_s, b_r, p):
 
     den   = sum([b_r[s, :] * a_r[s, :] for s in range(states)]) * a_s
     pStarT[:, 0] = p / states
-    pStarT[:, 1:] = [b_r[s, 1:] * f[s][1:] * p[i * states + s] * a_r[i, :mat - 1] / den[1:] for i in range(states) for s in range(states)]
+    pStarT[:, 1:] = [b_r[s, 1:] * f[1:,s] * p[S * states + s] * a_r[S, :mat - 1] / den[1:] for S in range(states) for s in range(states)]
     return np.array(pStarT)
 
 # E. Expected log-likelihood function to maximise
 def logLikFct(mu, var, p, pStar, pStarT):
     k = -0.5 * (np.log(2 * np.pi) + 1.0)  # the constant 'c' is set to 1.0
-    a = sum([sum([np.log(p[s * states + i]) * sum(pStarT[s * states + i, 1:]) for i in range(states)]) for s in range(states)])
+    a = sum([sum([np.log(p[s * states + S]) * sum(pStarT[s * states + S, 1:]) for S in range(states)]) for s in range(states)])
     b = sum([-0.5 * sum(pStar[s, :] * (np.log(var[s]) + (y -mu[s]) ** 2 / var[s])) for s in range(states)])
     return k + a + b
 
@@ -132,7 +132,7 @@ returns = y # will need for generating the dynamic function later..
 
 states   = 3
 assets   = len(sbl)
-sims     = 1000
+sims     = 500
 
 # 1. Set initial parameters
 # def runEstimation(returns, sims, states):
@@ -140,11 +140,11 @@ mat      = len(returns[0,:])
 llh      = np.zeros(sims)
 
 # store variances and probabilities
-vs       = np.zeros(states * sims).reshape(states, sims) # Needs to be fixed
-ms       = np.zeros(states * sims).reshape(states, sims) # Needs to be fixed
-ps       = np.zeros(states * states * sims).reshape(states * states, sims) # Needs to be fixed
+vs       = np.zeros((sims, states, assets, assets))
+ms       = np.zeros((sims, assets, states))
+ps       = np.zeros((sims, states, states))
 
-# var won't work with e.g. np.ones(states), hence the "weird" construction
+# Unimportant, but useful to initialise mu and var.
 pStarRandom = np.random.uniform(size = mat * states).reshape(states, mat)
 
 mu  = muFct(pStarRandom, returns, states)
@@ -178,9 +178,9 @@ for m in range(sims):
     logLik = logLikFct(mu, var, p, pStar, pStarT)
 
     # Save parameters for later plotting (redundant wrt optimisation)
-    ms[:, m]  = mu
-    vs[:, m] = var
-    ps[:, m] = p
+    ms[m]  = mu
+    vs[m]  = var
+    ps[m]  = p.reshape(3,3)
     llh[m] = logLik
 
     # return np.array(vs, ms, ps, llh, pStar, pStarT)
