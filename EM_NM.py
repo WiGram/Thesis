@@ -22,25 +22,19 @@ np.set_printoptions(suppress = True)   # Disable scientific notation
 # Output is f1, f2, ..., fN; var, mu must be arrays of parameters (i.e. for each state)
 #@jit
 def muFct(pStar, returns, states):
-    # mu  = [sum(pStar[s, :] * returns[i,:]) / sum(pStar[s, :]) for s in range(states) for i in range(len(returns[:,0]))] # further inspection
-    mu1 = [sum(pStar[s, :] * returns[0,:]) / sum(pStar[s, :]) for s in range(states)]
-    mu2 = [sum(pStar[s, :] * returns[1,:]) / sum(pStar[s, :]) for s in range(states)]
-    return np.array([mu1, mu2])
+    mu  = [np.array([sum(pStar[s, :] * returns[i,:]) / sum(pStar[s, :]) for s in range(states)]) for i in range(len(returns[:,0]))]
+    return np.array(mu)
 
 # Output: v1^2, v2^2, ..., vN^2
 #@jit
 def varFct(pStar, returns, mu, states):
-    var1 = [sum(pStar[s, :] * (returns[0,:] - mu[0,s]) ** 2) / sum(pStar[s, :]) for s in range(states)]
-    var2 = [sum(pStar[s, :] * (returns[1,:] - mu[1,s]) ** 2) / sum(pStar[s, :]) for s in range(states)]
-    cov  = [sum(pStar[s, :] * (returns[0,:] - mu[0,s]) * (returns[1,:] - mu[1,s])) / sum(pStar[s, :]) for s in range(states)]
-    covm = [ np.array([[var1[s],cov[s]], [cov[s],var2[s]]]) for s in range(states)]
+    covm = [np.array([sum(pStar[s, :] * (returns[i,:] - mu[i,s]) * (returns[j,:] - mu[j,s])) / sum(pStar[s, :]) for i in range(assets) for j in range(assets)]).reshape(assets,assets) for s in range(states)]
     return np.array(covm)
 
 #@jit
 def fFct(returns, mu, covm, states):
     det             = np.linalg.det(covm) # returns [det1, det2, ..., detN]
-    demeanedReturns = np.array([ np.array([ returns[0,:] - mu[0,s], 
-                                            returns[1,:] - mu[1,s]  ]) for s in range(states)])
+    demeanedReturns = np.array([ np.array([returns[i,:] - mu[i, s] for i in range(assets)]) for s in range(states)])
     f = [np.array([1 / np.sqrt( (2 * np.pi) ** 2 * det[s]) * np.exp(-0.5 * demeanedReturns[s,:,t].dot(np.linalg.inv(covm[s])).dot(demeanedReturns[s,:,t])) for s in range(states)]) for t in range(mat)]
     return np.array(f)
 
@@ -228,3 +222,4 @@ elif states == 4:
     pltm.plotUno(d, pStar[3,:], xLab = 'Time', yLab = 'p4', title = 'Smoothed State Probabilities')
 
 pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
+
