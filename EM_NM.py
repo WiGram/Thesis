@@ -32,10 +32,10 @@ def varFct(pStar, returns, mu, states):
     return np.array(covm)
 
 #@jit
-def fFct(returns, mu, covm, states):
+def fFct(returns, mu, covm, states, assets):
     det             = np.linalg.det(covm) # returns [det1, det2, ..., detN]
     demeanedReturns = np.array([ np.array([returns[i,:] - mu[i, s] for i in range(assets)]) for s in range(states)])
-    f = [np.array([1 / np.sqrt( (2 * np.pi) ** 2 * det[s]) * np.exp(-0.5 * demeanedReturns[s,:,t].dot(np.linalg.inv(covm[s])).dot(demeanedReturns[s,:,t])) for s in range(states)]) for t in range(mat)]
+    f = [np.array([1 / np.sqrt( (2 * np.pi) ** assets * det[s]) * np.exp(-0.5 * demeanedReturns[s,:,t].dot(np.linalg.inv(covm[s])).dot(demeanedReturns[s,:,t])) for s in range(states)]) for t in range(mat)]
     return np.array(f)
 
 # Output: p11, p12, ..., p1N, p21, p22, ..., p2N, ..., pN1, pN2, ..., pNN
@@ -104,8 +104,7 @@ def pStarTFct(f, mat, states, a_r, a_s, b_r, p):
 
 # E. Expected log-likelihood function to maximise
 #@jit
-def logLikFct(returns, mu, covm, p, pStar, pStarT):
-    f = fFct(returns, mu, covm, states)
+def logLikFct(returns, mu, covm, p, pStar, pStarT, f):
     k = -0.5 * (np.log(2 * np.pi) + 1.0)  # the constant 'c' is set to 1.0
     a = sum([sum([np.log(p[s * states + S]) * sum(pStarT[s * states + S, 1:]) for S in range(states)]) for s in range(states)])
     b = sum([-0.5 * sum(pStar[s, :] * f[:, s]) for s in range(states)])
@@ -134,7 +133,7 @@ d       = np.array(close.index, dtype = 'datetime64[D]')[1:]
 mat     = len(prices[:,0])
 returns = np.array([(np.log(prices[1:,i]) - np.log(prices[:mat-1,i])) * 100 for i in range(len(sbl))])
 
-sims     = 300
+sims     = 100
 states   = 3
 assets   = len(sbl)
 
@@ -159,7 +158,7 @@ mu  = muFct(pStarRandom, returns, states)
 var = varFct(pStarRandom, returns, mu, states)
 p   = np.repeat(1.0 / states, states * states)
 
-f   = fFct(returns, mu, var, states)
+f   = fFct(returns, mu, var, states, assets)
 
 a_r, a_s = aFct(mat, states, f, p)
 b_r      = bFct(mat, states, f, p)
@@ -172,7 +171,7 @@ for m in range(sims):
     # Reevaluate parameters given pStar    
     mu   = muFct(pStar, returns, states)
     var  = varFct(pStar, returns, mu, states)
-    f    = fFct(returns, mu, var, states)
+    f    = fFct(returns, mu, var, states, assets)
     p    = pFct(pStarT, states)
 
     # New smoothed probabilities
@@ -183,7 +182,7 @@ for m in range(sims):
     pStarT = pStarTFct(f, mat, states, a_r, a_s, b_r, p)
     
     # Compute the log-likelihood to maximise
-    logLik = logLikFct(returns, mu, var, p, pStar, pStarT)
+    logLik = logLikFct(returns, mu, var, p, pStar, pStarT, f)
 
     # Save parameters for later plotting (redundant wrt optimisation)
     ms[m]  = mu
