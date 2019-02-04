@@ -220,6 +220,11 @@ def EM(returns, sims, mat, states, assets, p, pS):
 # d     = np.array(sp500['Date'][15096:], dtype = 'datetime64[D]')
 # y     = np.array(sp500['log-ret_x100'][15096:]) # returns
 
+"""
+-------------------------------------------------------------------------------
+Example of an application:
+-------------------------------------------------------------------------------
+
 sbl = ['AAPL','DJP','HYG','VBMFX','^GSPC'] # Apply alphabetical order.
 bgn = '2010-01-01'
 end = '2015-09-17'
@@ -241,7 +246,7 @@ mat    = len(returns[0,:])
 p      = np.repeat(1.0 / states, states * states)
 pS     = np.random.uniform(size = states * mat).reshape(states, mat)
 
-ms, vs, ps, llh, pStar, pStarT = EM(returns, sims, mat, states, assets, p, pS)
+# ms, vs, ps, llh, pStar, pStarT = EM(returns, sims, mat, states, assets, p, pS)
 
 # test = runEstimation(y, sims, states)
 
@@ -289,3 +294,5 @@ elif states == 4:
     pltm.plotUno(d, pStar[3,:], xLab = 'Time', yLab = 'p4', title = 'Smoothed State Probabilities')
 
 pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
+
+"""
