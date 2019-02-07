@@ -16,46 +16,57 @@ import pandas as pd
 import quandl
 import scipy.optimize as opt
 from matplotlib import pyplot as plt
+# import matplotlib.style as style
 from numba import jit
 from pandas_datareader import data as web
+# import seaborn as sns
+plt.rcParams.update(plt.rcParamsDefault)
+plt.style.use('seaborn-paper')
 np.set_printoptions(suppress = True)   # Disable scientific notation
 
 bbData = pd.read_csv('/home/william/Dropbox/Thesis/mthReturns.csv', index_col=0,header=0)
-d = pd.to_datetime(bbData.index)
+bbData.index = pd.to_datetime(bbData.index, format = '%Y-%m-%d')
+bbData = bbData.sort_index()
+colNames = list(bbData)
+rows = len(bbData[colNames[0]])
+d = bbData.index
 
-highYield = bbData['LF98TRUU']
-investGrd = bbData['LUACTRUU']
-commodTR  = bbData['BCOMTR']
-russell2k = bbData['Russell2000']
-russell1k = bbData['Russell1000']
-sp500TR   = bbData['SPXT']
-
-pltm.plotUno(d, ts)
-
-""" 
-Check out following site for plotting: 
-https://jakevdp.github.io/PythonDataScienceHandbook/04.08-multiple-subplots.html
-"""
-
-fig = plt.figure()
-fig.subplots_adjust(hspace=0.4, wspace=0.4)
-fig.add_subplot()
-for i in range(1, 7):
-    ax = fig.add_subplot(2, 3, i)
-    ax.text(0.5, 0.5, str((2, 3, i)),
-           fontsize=18, ha='center')
-
-# 321 => 3 plots vertically, 2 plots horizontally, figure no. 1
-plt.subplot(321)
-plt.plot(d, highYield)
-plt.subplot(322)
-plt.plot(d, investGrd)
-plt.subplot(323)
-plt.plot(d, commodTR)
-plt.subplot(324)
-plt.plot(d, russell2k)
-plt.subplot(325)
-plt.plot(d, russell1k)
-plt.subplot(326)
-plt.plot(d, sp500TR)
+bbData.iloc[:,:len(colNames)].plot()
 plt.show()
+
+retList = ['HY_ret','IG_ret','CD_ret','R2_ret','R1_ret','SP_ret']
+
+for i in range(len(retList)):
+    bbData[retList[i]] = bbData[colNames[i]].pct_change()
+
+# 321: Plot rows = 3, plot columns = 2, plot is no. 1
+plotPos = [321, 322, 323, 324, 325, 326]
+
+for i in range(len(plotPos)):
+    plt.subplot(plotPos[i])
+    plt.plot(d, bbData[colNames[i]])
+plt.subplots_adjust(top = 0.92, bottom = 0.08, left = 0.10, right = 0.95,
+                    hspace = 0.5, wspace = 0.35)
+plt.show()
+
+
+
+for i in range(len(plotPos)):
+    plt.subplot(plotPos[i])
+    plt.plot(d, bbData[retList[i]])
+plt.show()
+
+descriptive = bbData.describe()
+
+# With pandas: use iloc for slicing by indices
+retDes = descriptive.iloc[:,len(colNames):]
+
+vols  = retDes.iloc[2,:]
+means = retDes.iloc[1,:]
+SR = means / vols
+
+SR.plot.bar(y = SR)
+plt.bar(SR, 1)
+plt.show()
+
+sns.pairplot(bbData.iloc[:,len(colNames):])
