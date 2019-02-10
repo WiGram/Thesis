@@ -83,7 +83,7 @@ import seaborn as sns
 from scipy import stats
 g = sns.PairGrid(monthlyRets, vars = retList)
 g = g.map_diag(sns.distplot, fit = stats.norm)
-g = g.map_offdiag(sns.scatterplot, fit = stats.reg)
+g = g.map_offdiag(sns.scatterplot)
 plt.show()
 
 g = sns.PairGrid(excessMRets, vars = retList)
