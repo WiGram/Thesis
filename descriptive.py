@@ -102,9 +102,6 @@ plt.show()
 monthlyRets.plot(subplots = True, layout = (int(assets / 2), 2), figsize = (8,16))
 plt.show()
 
-sns.distplot(data = monthlyRets, x = 'Returns', y = 'Asset Class', fit = stats.norm, height = 4)
-plt.show()
-
 # Moments and quartiles of return processes
 summary = monthlyRets.describe().transpose()
 
