@@ -24,56 +24,89 @@ plt.style.use('seaborn-paper')
 np.set_printoptions(suppress = True)   # Disable scientific notation
 
 # Read data into a Pandas data frame
-bbData = pd.read_csv('/home/william/Dropbox/Thesis/mthReturns.csv', index_col=0,header=0)
+bbData = pd.read_csv(
+    '/home/william/Dropbox/Thesis/mthReturns.csv', 
+    index_col=0,
+    header=0)
+
+rfData = pd.read_csv(
+    '/home/william/Dropbox/Thesis/rf.csv',
+    index_col=0,
+    header=0
+)
 
 # Set format of index to a date format
 bbData.index = pd.to_datetime(bbData.index)
+rfData.index = pd.to_datetime(rfData.index)
 
 # Sort data with oldest data first
 bbData = bbData.sort_index()
+rfData = rfData.sort_index()
 
 # Extract column names
 colNames = list(bbData)
 
 # Count amount of assets
+rows   = len(bbData.iloc[:,0])
 assets = len(colNames)
 
 # Define a vector d, to be used on the x-axis of plots
 d = bbData.index
 
 # Plot index price series
-bbData.iloc[:,:len(colNames)].plot()
-plt.show()
-
-# Hard coded return and volatility column names
-retList = ['HY_ret','IG_ret','CD_ret','R2_ret','R1_ret','SP_ret']
-
-# Generate return time series for each index
-for i in range(len(retList)):
-    bbData[retList[i]] = bbData[colNames[i]].pct_change()
-
-# Generate return correlation plots
-import seaborn as sns
-sns.pairplot(bbData.iloc[:,assets:2*assets])
+bbData.plot()
 plt.show()
 
 # ============================================= #
 # ===== Analysis of returns =================== #
 # ============================================= #
 
-# Applying log returns definition
-monthlyRets = np.log(bbData.iloc[:,:assets]/bbData.iloc[:,:assets].shift(1))
+rf = np.array(rfData.iloc[1:,0]) / 100
 
-# Histogram of mean returns
-monthlyRets.hist(bins=100,figsize=(12,6))
+# Applying log returns definition
+monthlyRets = bbData/bbData.shift()-1
+monthlyRets = monthlyRets.iloc[1:,:]
+
+# Hard coded return and volatility column names
+retList = ['High Yield','Investment Grade','Commodities','Russell 2000','Russell 1000','S&P 500']
+monthlyRets.columns = retList
+
+# Compute excess monthly returns
+excessMRets = monthlyRets.sub(rf, axis = 'rows')
+
+# Generate return correlation plots
+"""
+Arguably, true correlation should be measured by excess-returns,
+arguing that all indices are affected by the risk free return level.
+""" 
+import seaborn as sns
+from scipy import stats
+g = sns.PairGrid(monthlyRets, vars = retList)
+g = g.map_diag(sns.distplot, fit = stats.norm)
+g = g.map_offdiag(sns.scatterplot, fit = stats.reg)
+plt.show()
+
+g = sns.PairGrid(excessMRets, vars = retList)
+g = g.map_diag(sns.distplot, fit = stats.norm)
+# g = g.map_offdiag(sns.kdeplot, n_levels=6)
+g = g.map_offdiag(sns.scatterplot)
+plt.show()
+
+long_df = monthlyRets.stack().reset_index(name = 'Returns')
+long_df = long_df.rename(columns={'level_1':'Asset class',})
+g = sns.FacetGrid(data = long_df, col = 'Asset class', col_wrap = 2, height = 4)
+g.map(sns.distplot, 'Returns', fit = stats.norm)
 plt.show()
 
 # Time series plots of each return process
 monthlyRets.plot(subplots = True, layout = (int(assets / 2), 2), figsize = (8,16))
 plt.show()
 
+sns.distplot(data = monthlyRets, x = 'Returns', y = 'Asset Class', fit = stats.norm, height = 4)
+plt.show()
+
 # Moments and quartiles of return processes
-monthlyRets.describe().transpose()
+summary = monthlyRets.describe().transpose()
 
 # ============================================= #
 # ===== Analysis of volatility ================ #
@@ -88,6 +121,25 @@ plt.show()
 
 # monthlyRets.cov() * 12 # Yearly covariance matrix
 retCov = monthlyRets.cov()
+
+# ============================================= #
+# ===== SR ==================================== #
+# ============================================= #
+
+list(summary)
+l  = summary.index
+m  = summary['mean'] * 12
+s  = summary['std'] * np.sqrt(12)
+SR = m / s
+
+fig, ax = plt.subplots()
+ax.scatter(s, m)
+for i, txt in enumerate(l):
+    ax.annotate(txt, (s[i], m[i]), textcoords='offset pixels')
+plt.grid()
+plt.xlabel("Annualised volatility")
+plt.ylabel("Annualised return")
+plt.show()
 
 # ============================================= #
 # ===== Analysis of autocorrelation =========== #
@@ -110,9 +162,11 @@ plt.show()
 # ===== Analysis of optimal MPT portfolio ===== #
 # ============================================= #
 
-sims     = 50000
+sims      = 50000
 mptOutput = mpt.mptPortfolios(sims, monthlyRets, assets)
 mpt.mptScatter(mptOutput['pfVol'], mptOutput['pfRet'],mptOutput['pfSR'],mptOutput['weights'],monthlyRets, n = 12)
+
+list(mptOutput.keys())
 
 """
 The end
