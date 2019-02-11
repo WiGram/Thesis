@@ -5,7 +5,6 @@ Created on Mon Dec 17 12:13:35 2018
 @author: WiGram
 """
 
-import likelihoodModule as llm
 import plotsModule as pltm
 import numpy as np
 import pandas as pd
