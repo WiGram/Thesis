@@ -24,10 +24,9 @@ plt.style.use('seaborn-paper')
 np.set_printoptions(suppress = True)   # Disable scientific notation
 
 
-
 # Read data into a Pandas data frame
 
-def genData(data = 'default', rfData = 'default'):
+def genData(data = 'default', rfData = 'default', gov = 'default'):
 
     if data == 'default':
         data = pd.read_csv(
@@ -45,16 +44,26 @@ def genData(data = 'default', rfData = 'default'):
             index_col=0,
             header=0
         )
+    
+    if gov == 'default':
+        govData = pd.read_csv(
+            '/home/william/Dropbox/Thesis/10Gov.csv',
+            index_col=0,
+            header=0
+        )
 
     # Set format of index to a date format
     data.index = pd.to_datetime(data.index)
     rfData.index = pd.to_datetime(rfData.index)
+    govData.index = pd.to_datetime(govData.index)
 
     # Sort data with oldest data first
     data = data.sort_index()
     rfData = rfData.sort_index()
+    govData = govData.sort_index()
 
     # Count amount of assets
+    data.columns = colNames
     assets = len(colNames)
 
     # Return index dates
@@ -64,16 +73,16 @@ def genData(data = 'default', rfData = 'default'):
     # ===== Analysis of returns =================== #
     # ============================================= #
 
-    rf = np.array(rfData.iloc[1:,0]) / 100
+    rf = np.array(rfData.iloc[1:,0])
 
     # Applying actual returns convention
-    monthlyRets = data/data.shift()-1
+    monthlyRets = np.log(data/data.shift())*100
     monthlyRets = monthlyRets.iloc[1:,:]
+    monthlyRets['Gov'] = govData.iloc[:,0]
+
+    colNames = monthlyRets.columns
 
     rDates = monthlyRets.index
-
-    # Hard coded return and volatility column names
-    monthlyRets.columns = colNames
 
     # Var is squared return process, assuming true mean return of 0
     monthlyVol = np.sqrt(monthlyRets ** 2)
@@ -85,3 +94,4 @@ def genData(data = 'default', rfData = 'default'):
     excessMRets = monthlyRets.sub(rf, axis = 'rows')
     
     return data, monthlyRets, excessMRets, colNames, assets, monthlyVol, retCov, rf, pDates, rDates
+

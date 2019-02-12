@@ -16,12 +16,13 @@ np.set_printoptions(suppress = True)   # Disable scientific notation
 
 def returnPlots(states, sims, vs, ms, ps, pStar, llh, colNames, d):
     if states == 2:
+        pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
         pltm.plotDuo(range(sims), vs[0,:], vs[1,:], 'Var_1', 'Var_2', 'Trials', 'Variance')
         pltm.plotDuo(range(sims), ms[0,:], ms[1,:], 'Mu_1', 'Mu_2', 'Trials', 'Mean return')
         pltm.plotDuo(range(sims), ps[0,:], ps[3,:], 'p11', 'p22', 'Trials', 'Probability')
-        pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
     elif states == 3:
         # vs: vs[m, s, asset, asset] -> covariance for vs[m, s, 0, 1] or vs[m, s, 1, 0]
+        pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
         pltm.plotTri(range(sims), vs[:,0,0,0], vs[:, 1, 0, 0], vs[:, 2, 0, 0], 'Trials', 'Var_1', 'Var_2', 'Var_3', 'Variance', title = ('Variance of %s' % colNames[0]))
         pltm.plotTri(range(sims), vs[:,0,1,1], vs[:, 1, 1, 1], vs[:, 2, 1, 1], 'Trials', 'Var_1', 'Var_2', 'Var_3', 'Variance', title = ('Variance of %s' % colNames[1]))
         pltm.plotTri(range(sims), vs[:,0,2,2], vs[:, 1, 2, 2], vs[:, 2, 2, 2], 'Trials', 'Var_1', 'Var_2', 'Var_3', 'Variance', title = ('Variance of %s' % colNames[2]))
@@ -46,8 +47,8 @@ def returnPlots(states, sims, vs, ms, ps, pStar, llh, colNames, d):
         pltm.plotUno(d, pStar[0,:], xLab = 'Time', yLab = 'p1', title = 'Smoothed State Probabilities')
         pltm.plotUno(d, pStar[1,:], xLab = 'Time', yLab = 'p2', title = 'Smoothed State Probabilities')
         pltm.plotUno(d, pStar[2,:], xLab = 'Time', yLab = 'p3', title = 'Smoothed State Probabilities')
-        pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
     elif states == 4:
+        pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
         pltm.plotQuad(range(sims), vs[0,:], vs[1,:], vs[2,:], vs[3,:], 'Trials', 'Var_1', 'Var_2', 'Var_3', 'Var_4', 'Variance')
         pltm.plotQuad(range(sims), ms[0,:], ms[1,:], ms[2,:], ms[3,:], 'Trials', 'Mu_1', 'Mu_2', 'Mu_3', 'Mu_4', 'Mean return')
         pltm.plotQuad(range(sims), ps[0,:], ps[5,:], ps[10,:], ps[15,:], 'Trials', 'p11', 'p22', 'p33', 'p44', 'Probability')
@@ -55,4 +56,3 @@ def returnPlots(states, sims, vs, ms, ps, pStar, llh, colNames, d):
         pltm.plotUno(d, pStar[1,:], xLab = 'Time', yLab = 'p2', title = 'Smoothed State Probabilities')
         pltm.plotUno(d, pStar[2,:], xLab = 'Time', yLab = 'p3', title = 'Smoothed State Probabilities')
         pltm.plotUno(d, pStar[3,:], xLab = 'Time', yLab = 'p4', title = 'Smoothed State Probabilities')
-        pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')

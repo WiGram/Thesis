@@ -132,10 +132,19 @@ prices  = np.array(close)
 d       = np.array(close.index, dtype = 'datetime64[D]')[1:]
 mat     = len(prices[:,0])
 returns = np.array([(np.log(prices[1:,i]) - np.log(prices[:mat-1,i])) * 100 for i in range(len(sbl))])
-
-sims     = 100
-states   = 3
 assets   = len(sbl)
+
+""" 
+Data from descriptive.py:
+
+1. Run until and including line 75 (excessMRets = monthlyRets.sub(rf, axis = 'rows') )
+2. Run the following line:
+
+returns = np.array([monthlyRets.iloc[:,i] for i in range(assets)])
+"""
+
+sims     = 1000
+states   = 3
 
 # ============================================= #
 # ===== EM Algorithm ========================== #
@@ -197,6 +206,8 @@ for m in range(sims):
 # ===== Plotting ============================== #
 # ============================================= #
 
+pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
+
 if states == 2:
     pltm.plotDuo(range(sims), vs[0,:], vs[1,:], 'Var_1', 'Var_2', 'Trials', 'Variance')
     pltm.plotDuo(range(sims), ms[0,:], ms[1,:], 'Mu_1', 'Mu_2', 'Trials', 'Mean return')
@@ -225,6 +236,4 @@ elif states == 4:
     pltm.plotUno(d, pStar[1,:], xLab = 'Time', yLab = 'p2', title = 'Smoothed State Probabilities')
     pltm.plotUno(d, pStar[2,:], xLab = 'Time', yLab = 'p3', title = 'Smoothed State Probabilities')
     pltm.plotUno(d, pStar[3,:], xLab = 'Time', yLab = 'p4', title = 'Smoothed State Probabilities')
-
-pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
 

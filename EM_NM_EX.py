@@ -204,8 +204,8 @@ def EM(returns, sims, mat, states, assets, p, pS):
 
         # Save parameters for later plotting (redundant wrt optimisation)
         ms[m]   = mu
-        vs[m]   = var
-        ps[m]   = p.reshape(3,3)
+        vs[m]   = np.sqrt(var)
+        ps[m]   = p.reshape(states,states)
         llh[m]  = logLik
     
     return ms, vs, ps, llh, pStar, pStarT
