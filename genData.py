@@ -26,7 +26,8 @@ np.set_printoptions(suppress = True)   # Disable scientific notation
 
 # Read data into a Pandas data frame
 
-def genData(data = 'default', rfData = 'default', gov = 'default'):
+# def genData(data = 'default', rfData = 'default', gov = 'default'):
+def genData(data = 'default', rfData = 'default'):
 
     if data == 'default':
         data = pd.read_csv(
@@ -44,23 +45,24 @@ def genData(data = 'default', rfData = 'default', gov = 'default'):
             index_col=0,
             header=0
         )
-    
+    """
     if gov == 'default':
         govData = pd.read_csv(
             '/home/william/Dropbox/Thesis/10Gov.csv',
             index_col=0,
             header=0
         )
+    """
 
     # Set format of index to a date format
     data.index = pd.to_datetime(data.index)
     rfData.index = pd.to_datetime(rfData.index)
-    govData.index = pd.to_datetime(govData.index)
+    # govData.index = pd.to_datetime(govData.index)
 
     # Sort data with oldest data first
     data = data.sort_index()
     rfData = rfData.sort_index()
-    govData = govData.sort_index()
+    # govData = govData.sort_index()
 
     # Count amount of assets
     data.columns = colNames
@@ -78,7 +80,7 @@ def genData(data = 'default', rfData = 'default', gov = 'default'):
     # Applying actual returns convention
     monthlyRets = np.log(data/data.shift())*100
     monthlyRets = monthlyRets.iloc[1:,:]
-    monthlyRets['Gov'] = govData.iloc[:,0]
+    # monthlyRets['Gov'] = govData.iloc[:,0]
 
     colNames = monthlyRets.columns
 
