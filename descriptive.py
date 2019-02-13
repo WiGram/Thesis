@@ -18,6 +18,7 @@ import quandl
 import scipy.optimize as opt
 from scipy.optimize import minimize
 from matplotlib import pyplot as plt
+import statsmodels.tsa.api as smt
 # import matplotlib.style as style
 from numba import jit
 from pandas_datareader import data as web
@@ -43,27 +44,20 @@ arguing that all indices are affected by the risk free return level.
 """ 
 import seaborn as sns
 from scipy import stats
-g = sns.PairGrid(monthlyRets, vars = colNames)
-g = g.map_diag(sns.distplot, fit = stats.norm)
-g = g.map_offdiag(sns.scatterplot)
-plt.savefig('/home/william/Dropbox/Thesis/Plots/HistAndScatter.pdf', bbox_inches = 'tight',
-    pad_inches = 0)
-plt.show()
-
 g = sns.PairGrid(excessMRets, vars = colNames)
 g = g.map_diag(sns.distplot, fit = stats.norm)
 # g = g.map_offdiag(sns.kdeplot, n_levels=6)
 g = g.map_offdiag(sns.scatterplot)
-plt.savefig('/home/william/Dropbox/Thesis/Plots/HistAndScatterExcess.pdf', bbox_inches = 'tight',
+plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/HistAndScatterExcess.pdf', bbox_inches = 'tight',
     pad_inches = 0)
 plt.show()
 
 # Density plots for each return process
-long_df = monthlyRets.stack().reset_index(name = 'Returns')
+long_df = excessMRets.stack().reset_index(name = 'Returns')
 long_df = long_df.rename(columns={'level_1':'Asset class',})
-g = sns.FacetGrid(data = long_df, col = 'Asset class', col_wrap = 3, height = 6)
+g = sns.FacetGrid(data = long_df, col = 'Asset class', col_wrap = 2, height = 4, aspect = 1.5)
 g.map(sns.distplot, 'Returns', fit = stats.norm)
-plt.savefig('/home/william/Dropbox/Thesis/Plots/Densities.pdf', bbox_inches = 'tight',
+plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/Densities.pdf', bbox_inches = 'tight',
     pad_inches = 0)
 plt.show()
 
@@ -72,7 +66,8 @@ fig, axes = plt.subplots(nrows = 3,
                          ncols = 2, 
                          sharex = True, 
                          sharey = True, 
-                         figsize = (15,15))
+                         figsize = (14,16))
+fig.text(0.06, 0.5, 'Returns (pct.)', va='center', rotation='vertical')
 
 test = np.array([monthlyRets.iloc[:,i] for i in range(assets)])
 for ax, title, y in zip(axes.flat, colNames, test):
@@ -80,7 +75,7 @@ for ax, title, y in zip(axes.flat, colNames, test):
     ax.legend(loc = 'lower right')
     ax.set_title(title)
     ax.grid(False)
-plt.savefig('/home/william/Dropbox/Thesis/Plots/Returns.pdf', bbox_inches = 'tight',
+plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/Returns.pdf', bbox_inches = 'tight',
     pad_inches = 0)
 plt.show()
 
@@ -89,7 +84,8 @@ fig, axes = plt.subplots(nrows = 3,
                          ncols = 2, 
                          sharex = True, 
                          sharey = True, 
-                         figsize = (15,15))
+                         figsize = (14,16))
+fig.text(0.06, 0.5, 'Excess Returns (pct.)', va='center', rotation='vertical')
 
 test = np.array([excessMRets.iloc[:,i] for i in range(assets)])
 for ax, title, y in zip(axes.flat, colNames, test):
@@ -97,12 +93,12 @@ for ax, title, y in zip(axes.flat, colNames, test):
     ax.legend(loc = 'lower right')
     ax.set_title(title)
     ax.grid(False)
-plt.savefig('/home/william/Dropbox/Thesis/Plots/ExcessReturns.pdf', bbox_inches = 'tight',
+plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/ExcessReturns.pdf', bbox_inches = 'tight',
     pad_inches = 0)
 plt.show()
 
 # Moments and quartiles of return processes
-summaryRets = monthlyRets
+summaryRets = excessMRets
 summaryRets['Risk Free'] = rf
 
 # Describe mean and standard deviation (columns 1 and 2 in .describe)
@@ -124,7 +120,8 @@ fig, axes = plt.subplots(nrows = 3,
                          ncols = 2, 
                          sharex = True, 
                          sharey = True, 
-                         figsize = (15,15))
+                         figsize = (14,16))
+fig.text(0.06, 0.5, 'Volatility (pct.)', va='center', rotation='vertical')
 
 test = np.array([monthlyVol.iloc[:,i] for i in range(assets)])
 for ax, title, y in zip(axes.flat, colNames, test):
@@ -132,10 +129,9 @@ for ax, title, y in zip(axes.flat, colNames, test):
     ax.legend(loc = 'lower right')
     ax.set_title(title)
     ax.grid(False)
-plt.savefig('/home/william/Dropbox/Thesis/Plots/Vol.pdf', bbox_inches = 'tight',
+plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/Vol.pdf', bbox_inches = 'tight',
     pad_inches = 0)
 plt.show()
-
 
 # monthlyVol.plot(subplots = True, layout = (int(assets / 2), 2), figsize = (8,16))
 # plt.savefig('/home/william/Dropbox/Thesis/Plots/Vols.pdf', bbox_inches = 'tight',
@@ -158,8 +154,8 @@ for i, txt in enumerate(l):
     ax.annotate(txt, (s[i], m[i]))
 plt.grid()
 plt.xlabel("Annualised volatility")
-plt.ylabel("Annualised return")
-plt.savefig('/home/william/Dropbox/Thesis/Plots/Sharpes.pdf', bbox_inches = 'tight',
+plt.ylabel("Annualised excess return")
+plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/Sharpes.pdf', bbox_inches = 'tight',
     pad_inches = 0)
 plt.show()
 
@@ -167,20 +163,60 @@ plt.show()
 # ===== Analysis of autocorrelation =========== #
 # ============================================= #
 
+# Labelling function
 def label(ax, string):
     ax.annotate(string, (1, 1), xytext=(-8, -8), ha='right', va='top',
                 size=14, xycoords='axes fraction', textcoords='offset points')
 
-fig, axes = plt.subplots(nrows=assets, figsize=(8, 12))
+# Excess returns autocorrelation
+fig, axes = plt.subplots(nrows = 3, 
+                         ncols = 2, 
+                         sharex = True, 
+                         sharey = True, 
+                         figsize = (14,16))
 fig.tight_layout()
+fig.subplots_adjust(hspace=0.15)
 
-# Der antydes her en fejl. Dette ser ud til at være en falsk positiv - der er ingen fejl
-for i in range(assets):
-    pd.tools.plotting.autocorrelation_plot(monthlyRets.iloc[1:21,i], ax = axes[i])
-    label(axes[i], colNames[i])
-plt.savefig('/home/william/Dropbox/Thesis/Plots/Autocorrelation.pdf', bbox_inches = 'tight',
-    pad_inches = 0)
+for i, ax, title in zip(range(assets), axes.flat, colNames):
+    smt.graphics.plot_acf(excessMRets.iloc[:,i], lags=30, ax = ax, title = title)
+plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/Autocorrelation.pdf', 
+            bbox_inches = 'tight',
+            pad_inches = 0)
 plt.show()
+
+# Squared excess returns autocorrelation
+fig, axes = plt.subplots(nrows = 3, 
+                         ncols = 2, 
+                         sharex = True, 
+                         sharey = True,
+                         figsize=(14, 16))
+fig.tight_layout()
+fig.subplots_adjust(hspace=0.15)
+
+for i, ax, title in zip(range(assets), axes.flat, colNames):
+    smt.graphics.plot_acf(abs(excessMRets.iloc[:,i]), lags=30, ax = ax, title = title)
+plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/AutocorrelationSquared.pdf', 
+            bbox_inches = 'tight',
+            pad_inches = 0)
+plt.show()
+
+test = np.array(excessMRets.iloc[:,0])
+
+muTest = scipy.stats.tmean(test)
+muNew = sum(test) / len(test)
+sdTest = scipy.stats.tstd(test)
+import scipy
+kurt = scipy.stats.kurtosis(test)
+
+kurtTest = len(test) * sum( (test - muTest) ** 4 ) /(sum((test - muTest) ** 2) ) ** 2
+
+
+
+
+from statsmodels.graphics.tsaplots import plot_acf
+
+plt.show()
+
 
 # ============================================= #
 # ===== Analysis of optimal MPT portfolio ===== #
