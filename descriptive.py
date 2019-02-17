@@ -98,7 +98,7 @@ plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/ExcessReturns.pdf', bb
 plt.show()
 
 # Moments and quartiles of return processes
-summaryRets = excessMRets
+summaryRets = excessMRets.copy()
 summaryRets['Risk Free'] = rf
 
 # Describe mean and standard deviation (columns 1 and 2 in .describe)
@@ -144,8 +144,8 @@ plt.show()
 
 list(summary)
 l  = summary.iloc[:6,:].index
-m  = summary.iloc[:6,2]
-s  = summary.iloc[:6,3]
+m  = summary.iloc[:6,2] # Annualised mean
+s  = summary.iloc[:6,3] # Annualised volatility
 SR = m / s
 
 fig, ax = plt.subplots()
@@ -200,23 +200,19 @@ plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/AutocorrelationSquared
             pad_inches = 0)
 plt.show()
 
-test = np.array(excessMRets.iloc[:,0])
 
+"""
+Checking if scipy.stats.kurtosis is Kurtosis or excess Kurtosis.
+It turns out the excess kurtosis is computed.
+"""
+import scipy
+test = np.array(excessMRets.iloc[:,0])
 muTest = scipy.stats.tmean(test)
 muNew = sum(test) / len(test)
 sdTest = scipy.stats.tstd(test)
-import scipy
+
 kurt = scipy.stats.kurtosis(test)
-
 kurtTest = len(test) * sum( (test - muTest) ** 4 ) /(sum((test - muTest) ** 2) ) ** 2
-
-
-
-
-from statsmodels.graphics.tsaplots import plot_acf
-
-plt.show()
-
 
 # ============================================= #
 # ===== Analysis of optimal MPT portfolio ===== #
