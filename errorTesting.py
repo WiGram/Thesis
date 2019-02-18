@@ -163,10 +163,9 @@ xi_JB = xi_s + xi_k ~ Chi^2(2) = 5.991 (5 pct. level)
 """
 
 # To my knowledge: we must print the tables and hard copy the numbers
-resid = [test[i].resid for i in range(assets)]
-import scipy
-S = [scipy.stats.skew(resid[i]) for i in range(assets)]
-K = [scipy.stats.kurtosis(resid[i]) + 3 for i in range(assets)] # correct for excess kurtosis
+resid = [(test[i].resid - np.mean(test[i].resid) / np.std(test[i].resid) for i in range(assets)]
+S = [stats.skew(resid[i]) for i in range(assets)]
+K = [stats.kurtosis(resid[i]) + 3 for i in range(assets)] # correct for excess kurtosis
 
 xi_s = [T / 6 * S[i] ** 2 for i in range(assets)]
 xi_k = [T / 24 * (K[i] - 3) ** 2 for i in range(assets)]
@@ -180,3 +179,125 @@ the test.
 
 We could also consider modelling y_t as autoregressive processes.
 """
+
+# ============================================= #
+# ===== Consider AR models of any lags ======== #
+# ============================================= #
+
+test_lags = 12
+
+JB  = np.zeros((test_lags, assets))
+gammaTable = JB.copy()
+passGam = JB.copy()
+passBG = JB.copy()
+passNH = JB.copy()
+RES = JB.copy()
+passJB = JB.copy()
+
+chi2 = np.array([
+    3.841,
+    5.991,
+    7.815,
+    9.488,
+    11.071,
+    12.592,
+    14.067,
+    15.507,
+    16.919,
+    18.307,
+    19.675,
+    21.026,
+    22.362,
+    23.685,
+    24.996,
+    26.296,
+    27.587,
+    28.869,
+    30.144,
+    31.410,
+    32.671,
+    33.924,
+    35.172,
+    36.415
+])
+
+for m, c in enumerate(colNames):
+    for j in range(test_lags):
+        
+        lags = j + 1
+
+        y   = excessMRets[c]
+        x   = [y.shift(i)[lags:] for i in range(lags)]
+
+        X = np.column_stack(x)
+        Y = y[lags:]
+
+        # First model Y = beta_1 x_1 + ... + beta_n x_n + eps_t
+        model = sm.OLS(Y, X).fit()
+
+        # Retrieve eps_t
+        resids = model.resid
+
+        # Add lagged residuals to all regressors
+        resX = np.column_stack((X[1:,:], resids[1:]))
+
+        # Run the model
+        resModel = sm.OLS(resids[1:], resX).fit()
+
+        # Retrieve gamma and p-stat
+        gamma = resModel.params[j + 1]
+        pVal  = resModel.pvalues[j + 1]
+        gammaTable[j,m] = resModel.summary()
+        passGam[j, m] = bool(pVal < 0.05)
+
+        # Length of auxiliary regression eps_t = ...
+        T = resX.shape[0]
+
+        # Breusch-Godfrey LM test
+        r2 = resModel.rsquared
+        lm1 = T * r2
+
+        # Pass if less than Chi^2
+        passBG[j,m] = lm1 < chi2[0]
+
+        # If the LM1 test is passed, we should test for higher degrees
+        # of autocorrelation
+
+        # Test for No-Heteroskedasticity
+        resids2 = resids **2
+        X2 = X ** 2
+
+        # New auxiliary regression: eps^2 = mu + b x + b2 x^2 + u_t
+        resX2 = np.column_stack((X, X2))
+        test = sm.add_constant(resX2)
+        res2Model = sm.OLS(resids2, resX2).fit()
+
+        # We want all coefficients except for constant to be zero,
+        # i.e. b11 = b12 = ... = b1k = b21 = b22 = ... = b2k = 0
+        # This is tested against a Chi^2(2k) distribution, k being
+        # amount of lags.
+        r22 = res2Model.rsquared
+        lm2 = T * r22
+
+        # Pass if less than Chi^2
+        passNH[j,m] = lm2 < chi2[2 * (lags - 1) + 1] # ends at index k-1
+
+        # Define u = (eps_t - bar(eps)) / sigma(eps): all being ests
+        u = (resids - np.mean(resids)) / np.std(resids)        
+        
+        s = stats.skew(u)
+        k = stats.kurtosis(u)
+
+        xi_s = T / 6 * s ** 2
+        xi_k = T / 24 * k ** 2
+
+        JB[j,m] = xi_s + xi_k
+
+        passJB[j,m] = JB[j,m] < chi2[1]
+
+
+pd.DataFrame(JB, index = range(1,13), columns = colNames)
+pd.DataFrame(passGam, index = range(1,13), columns = colNames)
+pd.DataFrame(passBG, index = range(1,13), columns = colNames)
+pd.DataFrame(passNH, index = range(1,13), columns = colNames)
+pd.DataFrame(passJB, index = range(1,13), columns = colNames)
