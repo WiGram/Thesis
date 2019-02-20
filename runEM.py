@@ -43,6 +43,8 @@ returns = np.array(excessMRets.T)
 sims   = 500
 states = 3
 stateTitle = ['State '+i for i in map(str,range(1, states + 1))]
+volTitle = ['Volatility, state' + i for i in map(str, range(1, states + 1))]
+retTitle = ['Return, state' + i for i in map(str, range(1, states + 1))]
 mat    = len(returns[0,:])
 p      = np.repeat(1.0 / states, states * states)
 pS     = np.random.uniform(size = states * mat).reshape(states, mat)
@@ -63,7 +65,7 @@ plt.show()
 
 pltm.plotTri(range(sims), ps[:,0,0], ps[:, 1, 1], ps[:, 2, 2], 'Trials', 'p11', 'p22', 'p33', 'Probability')
 
-for j, txt in zip(range(states), stateTitle):
+for j, txt in zip(range(states), volTitle):
     fig, axes = plt.subplots(nrows = 3, ncols = 2, sharex = True, figsize = (15,15))
     fig.suptitle(txt, fontsize=16)
 
@@ -75,7 +77,7 @@ for j, txt in zip(range(states), stateTitle):
     plt.show()
 
 # sharex = True: the x-axis will be the same for all.. sharey = True is also possible
-for j, txt in zip(range(states), stateTitle):
+for j, txt in zip(range(states), retTitle):
     fig, axes = plt.subplots(nrows = 3, ncols = 2, sharex = True, figsize = (15,15))
     fig.suptitle(txt, fontsize=16)
 
