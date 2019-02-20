@@ -1,3 +1,5 @@
+import numpy as np
+
 S = 2
 A = 3
 

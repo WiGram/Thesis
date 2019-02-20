@@ -67,7 +67,7 @@ def cholFct(pS, y, mu, S, A):
     chol = [np.linalg.cholesky(covm[s,:,:]) for s in range(S)]
     return np.array(chol).reshape(S,A,A)
 
-def cholVarFct(chol, S):
+def cholVarFct(chol, S, A):
     var = [np.dot(chol[s,:,:],chol[s,:,:].T) for s in range(S)]
     return np.array(var).reshape(S,A,A)
 

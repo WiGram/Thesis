@@ -40,7 +40,7 @@ returns = np.array(excessMRets.T)
 #returns = np.array(excessMRets.T)
 
 
-sims   = 500
+sims   = 100
 states = 3
 stateTitle = ['State '+i for i in map(str,range(1, states + 1))]
 volTitle = ['Volatility, state' + i for i in map(str, range(1, states + 1))]

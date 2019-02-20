@@ -53,6 +53,7 @@ def varFct(pS, y, mu, S, A):
 def density(d, dR, covm, A):
         return 1 / np.sqrt( (2 * np.pi) ** A * d) * np.exp(-0.5 * dR.dot(np.linalg.inv(covm)).dot(dR))
 
+@jit(nopython = True)
 def fFct(y, mu, covm, S, A, T):
     """
     d:   determinant
