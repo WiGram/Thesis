@@ -107,7 +107,7 @@ def pStarTFct(f, mat, states, a_r, a_s, b_r, p):
 def logLikFct(returns, mu, covm, p, pStar, pStarT, f):
     k = -0.5 * (np.log(2 * np.pi) + 1.0)  # the constant 'c' is set to 1.0
     a = sum([sum([np.log(p[s * states + S]) * sum(pStarT[s * states + S, 1:]) for S in range(states)]) for s in range(states)])
-    b = sum([-0.5 * sum(pStar[s, :] * f[:, s]) for s in range(states)])
+    b = sum([-0.5 * sum(pStar[s, :] * np.log(f[:, s])) for s in range(states)])
     return k + a + b
 
 

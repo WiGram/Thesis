@@ -33,50 +33,72 @@ T = mat       # length of time series
 # Output is f1, f2, ..., fN; var, mu must be arrays of parameters (i.e. for each state)
 @jit(nopython = True)
 def muFct(pS, y, S, A):
+
+    def meanFct(pS, y):
+        return np.sum(pS * y) / np.sum(pS)
+
+    mu = np.zeros((A,S))
+
+    for a in range(A):
+        for s in range(S):
+            mu[a,s] = meanFct(pS[s,:], y[a,:])
     
-    def meanFct(p, y):
-        return np.sum(p * y) / np.sum(p)
-    
-    mu  = [[meanFct(pS[s,:], y[i,:]) for s in range(S)] for i in range(A)]
-    return np.array(mu)
+    return mu
 
 # Output: v1^2, v2^2, ..., vN^2
 @jit(nopython = True)
-def covFct(p, y1, y2, mu1, mu2):
-    return np.sum(p * (y1 - mu1) * (y2 - mu2)) / np.sum(p)
+def covFct(pS, y1, y2, mu1, mu2):
+    return np.sum(pS * (y1 - mu1) * (y2 - mu2)) / np.sum(pS)
 
-def varFct(pS, y, mu, S, A):   
-    covm = [[covFct(pS[s, :], y[i,:], y[j,:], mu[i,s], mu[j,s]) for i in range(A) for j in range(A)] for s in range(S)]
-    return np.array(covm).reshape(S,A,A)
+@jit(nopython = True)
+def varFct(pS, y, mu, S, A):
+
+    covm = np.zeros((S,A,A))
+    for s in range(S):
+        for i in range(A):
+            for j in range(A):
+                covm[s, i, j] = covFct(pS[s,:], y[i,:],y[j,:],mu[i,s],mu[j,s])
+
+    return covm
 
 @jit(nopython = True)
 def density(d, dR, covm, A):
         return 1 / np.sqrt( (2 * np.pi) ** A * d) * np.exp(-0.5 * dR.dot(np.linalg.inv(covm)).dot(dR))
 
-@jit(nopython = True)
+@jit
 def fFct(y, mu, covm, S, A, T):
     """
     d:   determinant
     dR:  demeaned returns
     """
     d  = np.linalg.det(covm) # returns [det1, det2, ..., detN], N: amount of states
-    dR = np.array([[y[i,:] - mu[i, s] for i in range(A)] for s in range(S)])
+    dR = np.zeros((S,A,T))
+    for s in range(S):
+        for a in range(A):
+            dR[s,a,:] = y[a,:] - mu[a,s]
 
-    f  = [[density(d[s], dR[s,:,t], covm[s], A) for s in range(S)] for t in range(T)]
-    return np.array(f)
+    f  = np.zeros((S, T))
+    for s in range(S):
+        for t in range(T):
+            f[s, t] = density(d[s], dR[s, :, t], covm[s], A)
+
+    return f
 
 # Output: p11, p12, ..., p1N, p21, p22, ..., p2N, ..., pN1, pN2, ..., pNN
-# @jit
+@jit(nopython = True)
 def pFct(pST, S):
     """
     den: denominator
     """
-    den = [np.sum([pST[s * S + i,:] for i in range(S)]) for s in range(S)]
-    p   = [np.sum(pST[s * S + i,:]) / den[s] for s in range(S) for i in range(S)]
-    return np.array(p)
+    p = np.zeros((S, S))
+    den = np.sum(np.sum(pST[:,:,1:], axis = 2), axis = 0)
+    for i in range(S):
+        p[:,i] = np.sum(pST[:,i,1:], axis = 1) / den[i]
 
+    return p    
+            
 # A. Forward algorithm
-# @jit(nopython = True)
+@jit
 def aFct(T, S, f, p):
     """
     For time t = 0
@@ -95,8 +117,11 @@ def aFct(T, S, f, p):
     aS[0]   = np.sum(a[:,0])
     aR[:,0] = a[:,0] / aS[0]
     """
+    a = np.zeros((S, T))
 
-    a  = np.repeat([f[s,0] / S for s in range(S)], T).reshape(S, T)
+    for s in range(S):
+        a[s,:] = f[s, 0] / S
+
     aS = np.repeat(np.sum(a[:,0]), T)
     aR = np.repeat(a[:,0] / aS[0], T).reshape(S, T)
 
@@ -104,14 +129,21 @@ def aFct(T, S, f, p):
     Fill out for t in [1, T]
     """
     for t in range(1, T):
-        a[:, t]  = [f[t,s] * np.sum([p[i * S + s] * aR[i, t-1] for i in range(S)]) for s in range(S)]
+        """
+        (1) p_ij: transition from i to j
+        (2) p[j,i] each column is where we come from, each row where we go to
+        (3) Hence: p_ij = p[j,i]
+        """
+        for j in range(S):
+            a[j,t] = f[j,t] * np.sum(p[j,:] * aR[:, t-1])
+
         aS[t]    = np.sum(a[:, t])
         aR[:, t] = a[:,t] / aS[t]
-
-    return np.array(aR), np.array(aS)
+        
+    return aR, aS
 
 # B. Backward algorithm
-# @jit(nopython = True)
+@jit
 def bFct(T, S, f, p):
     """
     bR = rescaled b
@@ -123,48 +155,64 @@ def bFct(T, S, f, p):
     """
     Fill out for t in [T-1: 0]
     range(Start, end, step) <- recall ends at index prior to end.
+
+    Also:
+        (1) p_ij: transition from i to j
+        (2) p[j,i] each column is where we come from, each row where we go to
+        (3) Hence: p_ij = p[j,i]
     """
     for t in range(T - 2, -1, -1):
-        b[:, t]   = [np.sum([bR[i, t+1] * f[t+1,i] * p[s * S + i] for i in range(S)]) for s in range(S)]
+        for i in range(S):
+            b[i, t] = np.sum(bR[:,t+1] * f[:, t+1] * p[:, i])
         bR[:, t] = b[:, t] / np.sum(b[:,t])
 
     return np.array(bR)
 
 # Output (smoothed) p1, p2, ..., pN
-#@jit
+@jit(nopython = True)
 def pStarFct(T, S, aR, bR):
-    """
-    den: denominator
-    """
-    den   = sum([bR[s, :] * aR[s, :] for s in range(S)])
-    pStar = [bR[s, :] * aR[s,:] / den for s in range(S)]
-    return np.array(pStar)
+    pStar = np.zeros((S, T))
+    for t in range(T):
+        den   = np.sum(bR[:, t] * aR[:, t]) # den = denominator
+        pStar[:,t] = bR[:, t] * aR[:,t] / den
+    return pStar
 
 # Output (smoothed transition) p11, p12, ..., p1N, p21, p22, ..., p2N, pN1, pN2, ..., pNN
-#@jit
+@jit(nopython = True)
 def pStarTFct(f, T, S, aR, aS, bR, p):
-    """
-    den: denominator
-    """
-    den   = sum([bR[s, :] * aR[s, :] for s in range(S)]) * aS
-    pStarT = np.repeat(p / S, T).reshape(S * S, T)
-
-    pStarT[:, 1:] = [bR[s, 1:] * f[1:,s] * p[i * S + s] * aR[i, :T - 1] / den[1:] for i in range(S) for s in range(S)]
-    return np.array(pStarT)
+    pStarT = np.zeros((S,S,T))
+    pStarT[:,:,0] = p / S
+    for t in range(1, T):
+        den = aS[t] * np.sum(bR[:,t] * aR[:,t])
+        for i in range(S):
+            pStarT[i, :,t] = bR[:,t] * f[:,t] * p[:,i] * aR[i, t-1] / den
+    
+    return pStarT
 
 # E. Expected log-likelihood function to maximise
-#@jit
+@jit(nopython = True)
 def logLikFct(y, f, p, pS, pST, S):
     k = -0.5 * (np.log(2 * np.pi) + 1.0)  # the constant 'c' is set to 1.0
-    a = sum([sum([np.log(p[s * S + i]) * sum(pST[s * S + i, 1:]) for i in range(S)]) for s in range(S)])
-    b = sum([-0.5 * sum(pS[s, :] * f[:, s]) for s in range(S)])
-    return k + a + b
+    
+    # first sum (V.13), page 13
+    sum_pIJ = 0
+    for i in range(S):
+        for j in range(S):
+            sum_pST = np.sum(pST[j, i, 1:])
+            sum_pIJ += np.log(p[j, i]) * sum_pST
+
+    # Second sum (V.13), page 13
+    sum_pJ = 0
+    for j in range(S):
+        sum_pJ += np.sum(pS[j, :] * np.log(f[j, :]))
+
+    return k + sum_pIJ + sum_pJ
 
 # ============================================= #
 # ===== EM Algorithm ========================== #
 # ============================================= #
 
-#@jit(nopython=True)
+@jit
 def EM(returns, sims, mat, states, assets, p, pS):
     llh      = np.zeros(sims)
 
@@ -179,11 +227,11 @@ def EM(returns, sims, mat, states, assets, p, pS):
 
     f   = fFct(returns, mu, var, states, assets, mat)
 
-    a_r, a_s = aFct(mat, states, f, p)
-    b_r      = bFct(mat, states, f, p)
+    aR, aS = aFct(mat, states, f, p)
+    bR      = bFct(mat, states, f, p)
 
-    pStar    = pStarFct(mat, states, a_r, b_r)
-    pStarT   = pStarTFct(f, mat, states, a_r, a_s, b_r, p)
+    pStar    = pStarFct(mat, states, aR, bR)
+    pStarT   = pStarTFct(f, mat, states, aR, aS, bR, p)
 
     # 3. EM-loop until convergence (we loop sims amount of times)
     for m in range(sims):

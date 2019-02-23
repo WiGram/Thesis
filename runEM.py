@@ -40,13 +40,13 @@ returns = np.array(excessMRets.T)
 #returns = np.array(excessMRets.T)
 
 
-sims   = 100
-states = 3
+sims   = 200
+states = 2
 stateTitle = ['State '+i for i in map(str,range(1, states + 1))]
 volTitle = ['Volatility, state' + i for i in map(str, range(1, states + 1))]
 retTitle = ['Return, state' + i for i in map(str, range(1, states + 1))]
 mat    = len(returns[0,:])
-p      = np.repeat(1.0 / states, states * states)
+p      = np.repeat(1.0 / states, states * states).reshape(states, states)
 pS     = np.random.uniform(size = states * mat).reshape(states, mat)
 
 ms, vs, ps, llh, pStar, pStarT = em.EM(returns, sims, mat, states, assets, p, pS)
@@ -87,3 +87,5 @@ for j, txt in zip(range(states), retTitle):
         ax.set_title(title)
         ax.grid(False)
     plt.show()
+
+
