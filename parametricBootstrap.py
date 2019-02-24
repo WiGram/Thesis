@@ -44,8 +44,8 @@ returns = np.array(excessMRets.T)
 # ===== Parameter initialisation ============== #
 # ============================================= #
 
-emSims = 100 # [EM]-algorithm simulations
-bsSims = 30  # [b]ootstrap[S]ims
+emSims = 250 # [EM]-algorithm simulations
+bsSims = 100  # [b]ootstrap[S]ims
 states = 3
 mat    = len(returns[0,:])
 probs  = np.repeat(1.0 / states, states * states).reshape(states, states)
@@ -63,18 +63,12 @@ m[0]   = ms[emSims - 1]
 v[0]   = vs[emSims - 1]
 p[0]   = ps[emSims - 1]
 l[0]   = llh[emSims - 1]
-pSt[0] = pStar
+startReg = np.argmax(pStar[:,0]) + 1 #technicality due to indexing.
 
-u = np.random.uniform(0, 1, size = mat * bsSims).reshape(mat, bsSims)
+u = np.random.uniform(0, 1, size = bsSims * mat).reshape(bsSims, mat)
 
 for r in range(1,bsSims):
-    # Starting regime
-    startReg = np.argmax(pStar[:,0]) + 1 #technicality due to indexing.
-    mu    = m[r-1]
-    cov   = v[r-1]
-    probs = p[r-1]
-
-    simReturns = rs.returnSim3(states, assets, startReg, mu, cov, probs, mat, u[:,r])
+    simReturns = rs.returnSim3(states, assets, startReg, m[0], v[0], p[0], mat, u[r,:])
 
     ms, vs, ps, llh, pStar, pStarT = em.EM(simReturns, emSims, mat, states, assets, probs, pSt[0])
 
@@ -103,10 +97,18 @@ for i in range(states):
     plt.plot(np.diag(p[:,idx[:,i],idx[:,i]]))
 plt.show()
 
+
+# Compare idx derived from returns to those achieved from probs
+jdx  = np.zeros((bsSims, states)).astype(int)
+for i in range(bsSims):
+    jdx[i,0]  = int(np.argmax(m[i,0,:]))
+    jdx[i,2]  = int(np.argmin(m[i,0,:]))
+    jdx[i,1]  = int(np.where(m[i,0,:] == np.median(m[i,0,:]))[0])
+
 # Plotting of returns
 newMu = np.zeros((bsSims, states))
 for j in range(bsSims):
-    newMu[j,:] = m[j,0,idx[j,:]]
+    newMu[j,:] = m[j,0,jdx[j,:]]
 
 # WIP: plot confidence bands around e.g. mu
 test  = np.zeros((bsSims,states,states))
@@ -115,9 +117,11 @@ for i in range(states):
     test[:,1,i] = np.mean(newMu[:,i])
     test[:,2,i] = np.quantile(newMu[:,i], 0.75)
 
-for i in range(states):
-    plt.plot(newMu[:,i])
-    plt.plot(test[:,1,i])
-plt.show()
+cols  = ('b-','r-','k-')
+lines = ('b--','r--','k--')
 
-idx
+for i, c, cc in zip(range(states), cols, lines):
+    plt.plot(newMu[:,i], c)
+    plt.plot(test[:,0,i], cc)
+    plt.plot(test[:,2,i], cc)
+plt.show()

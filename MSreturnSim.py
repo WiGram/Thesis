@@ -67,9 +67,6 @@ def stateSim3(startReg, probs, mat, u):
 def returnSim3(states, assets, startReg, mu, cov, probs, mat, u):
     state_ms, length = stateSim3(startReg, probs, mat, u)
 
-    # Solve this !!!!
-    cov = np.nan_to_num(cov)
-
     returns = np.ones((assets, mat))
 
     for s in range(states):
