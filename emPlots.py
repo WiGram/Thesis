@@ -47,7 +47,7 @@ def emPlots(sims, states, assets, rDates, colNames,
                                     figsize = (15,15))
             fig.suptitle(txt, fontsize=16)
 
-            test = np.array([vs[:,j,i,i] for i in range(assets)])
+            test = np.array([np.sqrt(vs[:,j,i,i]) for i in range(assets)])
             for ax, title, y in zip(axes.flat, colNames, test):
                 ax.plot(range(sims), y)
                 ax.set_title(title)

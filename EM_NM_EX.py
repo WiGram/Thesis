@@ -58,7 +58,7 @@ def varFct(pS, y, mu, S, A):
         for i in range(A):
             for j in range(A):
                 covm[s, i, j] = covFct(pS[s,:], y[i,:],y[j,:],mu[i,s],mu[j,s])
-
+    
     return covm
 
 @jit(nopython = True)
@@ -70,7 +70,14 @@ def fFct(y, mu, covm, S, A, T):
     """
     d:   determinant
     dR:  demeaned returns
+    
+    c:   Cholesky factor
+    c = np.zeros((S, A, A))
+    for s in range(S):
+        c[s]  = np.linalg.cholesky(covm[s])
+        c[s]  = np.dot(c[s], c[s].T)
     """
+
     d  = np.linalg.det(covm) # returns [det1, det2, ..., detN], N: amount of states
     dR = np.zeros((S,A,T))
     for s in range(S):
@@ -253,7 +260,7 @@ def EM(returns, sims, mat, states, assets, p, pS):
 
         # Save parameters for later plotting (redundant wrt optimisation)
         ms[m]   = mu
-        vs[m]   = np.sqrt(var)
+        vs[m]   = var
         ps[m]   = p.reshape(states,states)
         llh[m]  = logLik
     

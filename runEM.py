@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Date:    February 11th, 2019
 Authors: Kristian Strand and William Gram
@@ -22,7 +21,7 @@ prices, monthlyRets, excessMRets, colNames, assets, monthlyVol, retCov, rf, pDat
 # ===== Monthly Absolute ===== #
 # monthlyRets = monthlyRets.drop(['S&P 500', 'Gov'], axis = 1)
 monthlyRets = monthlyRets.drop(['S&P 500'], axis = 1)
-colNames = monthlyRets.columns
+colNames =.columns
 assets = len(colNames)
 returns = np.array(monthlyRets.T)
 """
