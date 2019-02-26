@@ -57,7 +57,7 @@ l   = np.zeros((bsSims))
 pSt = np.zeros((bsSims, states, mat))
 pSt[0] = np.random.uniform(size = states * mat).reshape(states, mat)
 
-ms, vs, ps, llh, pStar, pStarT = em.EM(returns, emSims, mat, states, assets, probs, pSt[0])
+ms, vs, ps, llh, pStar, pStarT = em.multEM(returns, emSims, mat, states, assets, probs, pSt[0])
 
 m[0]   = ms[emSims - 1]
 v[0]   = vs[emSims - 1]
@@ -70,7 +70,7 @@ u = np.random.uniform(0, 1, size = bsSims * mat).reshape(bsSims, mat)
 for r in range(1,bsSims):
     simReturns = rs.returnSim3(states, assets, startReg, m[0], v[0], p[0], mat, u[r,:])
 
-    ms, vs, ps, llh, pStar, pStarT = em.EM(simReturns, emSims, mat, states, assets, probs, pSt[0])
+    ms, vs, ps, llh, pStar, pStarT = em.multEM(simReturns, emSims, mat, states, assets, probs, pSt[0])
 
     m[r]   = ms[emSims - 1]
     v[r]   = vs[emSims - 1]

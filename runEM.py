@@ -48,12 +48,83 @@ params = ms[sims-1], vs[sims-1], ps[sims-1], pStar, pStarT
 emp.emPlots(sims, states, assets, rDates, colNames, llh, ps, vs, ms, pStar)
 emp.emUniPlots(sims, states, rDates, colNames, l, p, v, m, pss)
 
-from llhFct import llhFct
+
+
+
+
+
+
+# Testing standard errors on likelihood function
+# So far without success:
+
+from llhFct import llhFct, llhUniFct
 
 llhFct(params, returns)
 
+args = rets, pss, pst
+pars = m[sims-1], v[sims-1], np.concatenate(p)
+
+llhUniFct(np.concatenate(pars), *args)
+
 import numdifftools as nd
 
-jac_fct = nd.Jacobian(llhFct)
+params = m[sims-1], v[sims-1], np.concatenate(p[sims-1])
 
-jac_fct(params, args = returns)
+jacf = nd.Jacobian(llhUniFct)
+jacf(np.concatenate(pars), *args)
+
+
+"""
+Example of how to use numdifftools
+
+def testFct(x, a, b):
+    return - x ** 2 * a + b
+
+testFct(3, 1, np.array([1,2,3,4]))
+
+# Expected Output
+# - 3 ** 2 * 1 + (1,2,3,4)
+# - 9 + (1,2,3,4)
+# = - (8,7,6,5)
+#
+# Actual output
+# = - (8,7,6,5) => OKAY!
+
+jacf = nd.Gradient(testFct)
+jacf(2, np.array([2,3,4]), 1)
+
+# EXPECTED OUTPUT
+# f' of (- x ** 2) * [2,3,4]
+# = -2 * x * [2,3,4]
+# = -2 * 2 * [2,3,4]
+# = -8, - 12, -16
+
+# OUTPUT: -8, - 12, -16 => OKAY!
+
+def testTwoFct(vars, args):
+    a = args[0]
+    b = args[1]
+    xes = args[2]
+    x = vars[:xes]
+    y = vars[xes:]
+
+    return - x ** 2 * a + y ** 2 *b
+
+testTwoFct(2,3,1,1)
+# Output: 5
+
+x = np.array([2,3])
+y = np.array([2])
+
+vars = np.concatenate([x,y])
+
+a = np.array([2])
+b = np.array([2])
+xes = np.array([len(x)])
+
+args = np.concatenate([a,b, xes])
+
+jacf = nd.Gradient(testTwoFct)
+jacf(vars, args)
+
+"""

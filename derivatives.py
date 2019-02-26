@@ -1,4 +1,6 @@
 import numpy as np
+import numdifftools as nd
+np.set_printoptions(suppress = True)   # Disable scientific notation
 
 def firstMu(pS, returns, mu, vol):
     return pS * (returns - mu) / vol ** 2
@@ -42,13 +44,20 @@ def score(pS, pST, rets, mu, vol, p):
     return np.diag(np.sum(product, axis = 0) / T)
 
 
+
 """
-test4 = score(pS, pST, rets, ms[ms.shape[0]-1, 0, :], vs[vs.shape[0]-1, :, 0, 0], ps[ps.shape[0]-1, :, :])
+mu   = m[m.shape[0]-1, :]
+vol  = v[v.shape[0]-1, :]
+p    = np.concatenate(p[p.shape[0]-1, :, :])
+rets = returns[0]
+pS   = pss
+pST  = pst
+test4 = score(pS, pST, rets, mu, vol, p)
 """
 
 
 # Numerical derivative
-def derivative(f,a,method='central',h=0.01):
+def derivative(f,a,args,method='central',h=0.01):
     '''Compute the difference formula for f'(a) with step size h.
 
     Parameters
@@ -71,11 +80,20 @@ def derivative(f,a,method='central',h=0.01):
             backward: f(a) - f(a-h))/h            
     '''
     if method == 'central':
-        return (f(a + h) - f(a - h))/(2*h)
+        return (f(a + h,args) - f(a - h,args))/(2*h)
     elif method == 'forward':
-        return (f(a + h) - f(a))/h
+        return (f(a + h,args) - f(a,args))/h
     elif method == 'backward':
-        return (f(a) - f(a - h))/h
+        return (f(a,args) - f(a - h,args))/h
     else:
         raise ValueError("Method must be 'central', 'forward' or 'backward'.")
 
+def testFct(x, args):
+    a = args[0]
+    b = args[1]
+    return - x ** 2 * a + b
+
+args = np.array([2,3])
+
+
+derivative(testFct, 2, args, method = 'central', h = 0.00001)
