@@ -23,12 +23,10 @@ def densityUni(dR, var):
 
 
 @jit
-def llhFct(params, y):
+def llhFct(params, y, pS, pST):
     mu = params[0]
     covm = params[1]
     p = params[2]
-    pS = params[3]
-    pST = params[4]
 
     S = mu.shape[1]  # has shape 5,3
     A = mu.shape[0]  # see above.

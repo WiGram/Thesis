@@ -39,14 +39,15 @@ mat    = len(returns[0,:])
 p      = np.repeat(1.0 / states, states * states).reshape(states, states)
 pS     = np.random.uniform(size = states * mat).reshape(states, mat)
 
+# Multivariate
 ms, vs, ps, llh, pStar, pStarT = em.multEM(returns, sims, mat, states, assets, p, pS)
 
-m, v, p, l, pss, pst = em.uniEM(returns[0], sims, mat, states, p, pS)
+# Univariate
+m, v, pp, l, pss, pst = em.uniEM(returns[0], sims, mat, states, p, pS)
 
-params = ms[sims-1], vs[sims-1], ps[sims-1], pStar, pStarT
 # Plot all
 emp.emPlots(sims, states, assets, rDates, colNames, llh, ps, vs, ms, pStar)
-emp.emUniPlots(sims, states, rDates, colNames, l, p, v, m, pss)
+emp.emUniPlots(sims, states, rDates, colNames, l, pp, v, m, pss)
 
 
 
@@ -59,9 +60,13 @@ emp.emUniPlots(sims, states, rDates, colNames, l, p, v, m, pss)
 
 from llhFct import llhFct, llhUniFct
 
-llhFct(params, returns)
+# Multivariate
+params = ms[sims-1], vs[sims-1], ps[sims-1]
+args   = returns, pStar, pStarT
+llhFct(params, *args)
 
-args = rets, pss, pst
+
+args = returns[0], pss, pst
 pars = m[sims-1], v[sims-1], np.concatenate(p)
 
 llhUniFct(np.concatenate(pars), *args)
