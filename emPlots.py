@@ -19,7 +19,7 @@ def emPlots(sims, states, assets, rDates, colNames,
     if llhPlot == True:
         pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
 
-    # Volatility plots
+    # Smoothed probabilities
     if regPlot == True:
         fig, axes = plt.subplots(nrows = 1,ncols = states,sharex = True,figsize = (15,6))
         test = np.array([pStar[j,:] for j in range(states)])
@@ -34,7 +34,7 @@ def emPlots(sims, states, assets, rDates, colNames,
         for i in range(states):
             plt.plot(ps[:,i,i], label = "p{}{}".format(i+1,i+1))
         plt.legend()
-        plt.ylabel('Probabilitiy')
+        plt.ylabel('Probability')
         plt.xlabel('Trials')
         plt.show()
 
@@ -70,5 +70,54 @@ def emPlots(sims, states, assets, rDates, colNames,
                 ax.grid(False)
             plt.show()
 
+
+def emUniPlots(sims, states, rDates, colNames, 
+            llh, ps, vs, ms, pStar, 
+            llhPlot = True, regPlot = True, 
+            probPlot = True, volPlot = True, 
+            retPlot = True):
+    stateTitle = ['State '+i for i in map(str,range(1, states + 1))]
+    volTitle = ['Volatility, state ' + i for i in map(str, range(1, states + 1))]
+    retTitle = ['Return, state ' + i for i in map(str, range(1, states + 1))]
+
+    # Log-likelihood convergence plot
+    if llhPlot == True:
+        pltm.plotUno(range(sims), llh, yLab = 'log-likelihood value')
+
+    # Smoothed probabilities
+    if regPlot == True:
+        fig, axes = plt.subplots(nrows = 1,ncols = states,sharex = True,figsize = (15,6))
+        for ax, title, y in zip(axes.flat, stateTitle, pStar):
+            ax.plot(rDates, y)
+            ax.set_title(title)
+            ax.grid(False)
+        plt.show()
+    
+    # Transition probabilities
+    if probPlot == True:
+        for i in range(states):
+            plt.plot(ps[:,i,i], label = "p{}{}".format(i+1,i+1))
+        plt.legend()
+        plt.ylabel('Probability')
+        plt.xlabel('Trials')
+        plt.show()
+
+    # Return volatility plot
+    if volPlot == True:
+        for i in range(states):
+            plt.plot(np.sqrt(vs[:,i]), label = "Volatility (s = {})".format(i+1))
+        plt.legend()
+        plt.ylabel('Volatility')
+        plt.xlabel('Trials')
+        plt.show()
+    
+    # Mean returns plot
+    if retPlot == True:
+        for i in range(states):
+            plt.plot(ms[:,i], label = "Return (s = {})".format(i+1))
+        plt.legend()
+        plt.ylabel('Rate of return')
+        plt.xlabel('Trials')
+        plt.show()
 
 

@@ -33,14 +33,27 @@ colNames = excessMRets.columns
 assets = len(colNames)
 returns = np.array(excessMRets.T)
 
-
 sims   = 200
-states = 2
+states = 3
 mat    = len(returns[0,:])
 p      = np.repeat(1.0 / states, states * states).reshape(states, states)
 pS     = np.random.uniform(size = states * mat).reshape(states, mat)
 
-ms, vs, ps, llh, pStar, pStarT = em.EM(returns, sims, mat, states, assets, p, pS)
+ms, vs, ps, llh, pStar, pStarT = em.multEM(returns, sims, mat, states, assets, p, pS)
 
+m, v, p, l, pss, pst = em.uniEM(returns[0], sims, mat, states, p, pS)
+
+params = ms[sims-1], vs[sims-1], ps[sims-1], pStar, pStarT
 # Plot all
 emp.emPlots(sims, states, assets, rDates, colNames, llh, ps, vs, ms, pStar)
+emp.emUniPlots(sims, states, rDates, colNames, l, p, v, m, pss)
+
+from llhFct import llhFct
+
+llhFct(params, returns)
+
+import numdifftools as nd
+
+jac_fct = nd.Jacobian(llhFct)
+
+jac_fct(params, args = returns)
