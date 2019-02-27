@@ -23,31 +23,31 @@ prices, monthlyRets, excessMRets, colNames, assets, monthlyVol, retCov, rf, pDat
 monthlyRets = monthlyRets.drop(['S&P 500'], axis = 1)
 colNames =.columns
 assets = len(colNames)
-returns = np.array(monthlyRets.T)
+y = np.array(monthlyRets.T)
 """
 
 # ===== Monthly excess returns ===== #
 # monthlyRets = monthlyRets.drop(['S&P 500', 'Gov'], axis = 1)
 excessMRets = excessMRets.drop(['S&P 500'], axis = 1)
 colNames = excessMRets.columns
-assets = len(colNames)
-returns = np.array(excessMRets.T)
+A = len(colNames) # Assets
+y = np.array(excessMRets.T) # Returns
 
-sims   = 200
-states = 3
-mat    = len(returns[0,:])
-p      = np.repeat(1.0 / states, states * states).reshape(states, states)
-pS     = np.random.uniform(size = states * mat).reshape(states, mat)
+sims = 200
+S    = 3 # States
+T    = len(y[0,:]) # Periods
+p    = np.repeat(1.0 / S, S * S).reshape(S, S)
+pS   = np.random.uniform(size = S * T).reshape(S, T)
 
 # Multivariate
-ms, vs, ps, llh, pStar, pStarT = em.multEM(returns, sims, mat, states, assets, p, pS)
+ms, vs, ps, llh, pStar, pStarT = em.multEM(y, sims, T, S, A, p, pS)
 
 # Univariate
-m, v, pp, l, pss, pst = em.uniEM(returns[0], sims, mat, states, p, pS)
+m, v, pp, l, pss, pst = em.uniEM(y[0], sims, T, S, p, pS)
 
 # Plot all
-emp.emPlots(sims, states, assets, rDates, colNames, llh, ps, vs, ms, pStar)
-emp.emUniPlots(sims, states, rDates, colNames, l, pp, v, m, pss)
+emp.emPlots(sims, S, A, rDates, colNames, llh, ps, vs, ms, pStar)
+emp.emUniPlots(sims, S, rDates, colNames, l, pp, v, m, pss)
 
 
 
@@ -61,22 +61,21 @@ emp.emUniPlots(sims, states, rDates, colNames, l, pp, v, m, pss)
 from llhFct import llhFct, llhUniFct
 
 # Multivariate
-params = ms[sims-1], vs[sims-1], ps[sims-1]
-args   = returns, pStar, pStarT
+params = ms[sims-1], vs[sims-1], ps[sims-1][:S-1, :]
+args   = y, pStar, pStarT
 llhFct(params, *args)
 
 
-args = returns[0], pss, pst
-pars = m[sims-1], v[sims-1], np.concatenate(p)
+params = m[sims-1], v[sims-1], np.concatenate(pp[sims-1][:S-1,:])
+args = y[0], pss, pst
 
-llhUniFct(np.concatenate(pars), *args)
+llhUniFct(np.concatenate(params), *args)
 
 import numdifftools as nd
 
-params = m[sims-1], v[sims-1], np.concatenate(p[sims-1])
 
 jacf = nd.Jacobian(llhUniFct)
-jacf(np.concatenate(pars), *args)
+jacf(np.concatenate(params), *args)
 
 
 """

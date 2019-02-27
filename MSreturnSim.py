@@ -1,9 +1,9 @@
 import numpy as np
 from numba import jit
 
-def returnSim4(startReg, probs, mat, u):
-    state_ms = np.repeat(startReg, mat)
-    for t in range(1,mat):
+def returnSim4(startReg, probs, T, u):
+    state_ms = np.repeat(startReg, T)
+    for t in range(1,T):
         if state_ms[t-1] == 1:
             state_ms[t] = \
                 (u[t] <= probs[0,0]) * 1 + \
@@ -37,9 +37,9 @@ def returnSim4(startReg, probs, mat, u):
         return state_ms
 
 @jit
-def stateSim3(startReg, probs, mat, u):
-    state_ms = np.repeat(startReg, mat)
-    for t in range(1,mat):
+def stateSim3(startReg, probs, T, u):
+    state_ms = np.repeat(startReg, T)
+    for t in range(1,T):
         if state_ms[t-1] == 1:
             state_ms[t] = \
                 (u[t] <= probs[0,0]) * 1 + \
@@ -64,12 +64,12 @@ def stateSim3(startReg, probs, mat, u):
 
     return state_ms, length
 
-def returnSim3(states, assets, startReg, mu, cov, probs, mat, u):
-    state_ms, length = stateSim3(startReg, probs, mat, u)
+def returnSim3(S, A, startReg, mu, cov, probs, T, u):
+    state_ms, length = stateSim3(startReg, probs, T, u)
 
-    returns = np.ones((assets, mat))
+    returns = np.ones((A, T))
 
-    for s in range(states):
+    for s in range(S):
         returns[:, state_ms == s + 1] = np.random.multivariate_normal(mu[:,s], cov[s], length[s]).T
 
     return returns

@@ -55,7 +55,7 @@ def llhFct(params, y, pS, pST):
         for t in range(T):
             f[s, t] = density(d[s], dR[s, :, t], covm[s], A)
     
-    k = -0.5 * (np.log(2 * np.pi) + 1.0)  # the constant 'c' is set to 1.0
+    c = 1.0 # Arbitrarily set c = some constant, e.g. 1.0 (float)
     
     # first sum (V.13), page 13
     sum_pIJ = 0
@@ -69,7 +69,7 @@ def llhFct(params, y, pS, pST):
     for j in range(S):
         sum_pJ += np.sum(pS[j, :] * np.log(f[j, :]))
 
-    return k + sum_pIJ + sum_pJ
+    return c + sum_pIJ + sum_pJ
 
 @jit
 def llhUniFct(params, y, pS, pST):

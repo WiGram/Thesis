@@ -8,16 +8,16 @@ def firstMu(pS, returns, mu, vol):
 def firstVol(pS, returns, mu, vol):
     return -0.5 * pS * (1 / vol ** 2 - (returns - mu) ** 2 / vol ** 4)
 
-def firstPj(pST, returns, pj, pN):
-    return pST * (1 / pj - 1 / pN)
+def firstPj(pSTj, pSTN, pj, pN):
+    return pSTj / pj - pSTN / pN
 
-def secondMuMu(pS, returns, mu, vol):
+def secondMuMu(pS, vol):
     return - sum(pS / vol ** 4)
 
 def secondVolVol(pS, returns, mu, vol):
     return - sum( pS * ((returns - mu) ** 2 / vol ** 6 - 0.5 * 1 / vol ** 4))
 
-def secondPjPj(pST, returns, pj, pN):
+def secondPjPj(pST, pj, pN):
     return -sum(pST * (1 / pj ** 2 - 1 / pN ** 2))
 
 def secondPNPN(pST, returns, pj, pN):
@@ -28,23 +28,35 @@ def secondMuVol(pS, returns, mu, vol):
 
 def score(pS, pST, rets, mu, vol, p):
     S = len(mu)
+    N = S - 1
     T = len(rets)
     
+    # One derivative for each time period t
     m = np.array([firstMu(pS[s,:], rets, mu[s], vol[s]) for s in range(S)])
-    v = np.array([firstVol(pS[s,:], rets, mu[s], vol[s]) for s in range(S)])
+    v = np.array([firstVol(pS[s,:], rets[:], mu[s], vol[s]) for s in range(S)])
 
-    pj = np.zeros((S,S,T))
-    pj[:S-1,:S,:T] = np.array([[firstPj(pST[i,j,:], rets[:], p[i,j], p[i,S-1]) for i in range(S)] for j in range(S-1)])
-    pj[S-1,:S,:T]  = np.array([firstPj(pST[i,S-1,:], rets[:], p[i,S-1], p[i,0]) for i in range(S)])
+    # For each column j (where we come from)
+    # last row i in each column is the residual
+    # Returns T-1 matrices of shape (2 x 3) -> last row is not estimated as it is a residual
+    pj = np.zeros((N, S, T))
+    pj[:,:,1:] = np.array([[firstPj(pST[i,j,1:], pST[N,j,1:], p[i,j], p[N,j]) for j in range(S)] for i in range(N)])
+    
+    score = np.array([np.concatenate((m[:,t], v[:,t], np.concatenate(pj[:,:,t]))) for t in range(T)]).T
 
-    score = np.concatenate((m, v, pj.reshape(9,T)))
+    product = np.array([np.outer(score[:,t], score[:,t]) for t in range(T)]) / T
 
-    product = np.array([np.outer(score[:,t], score[:,t]) for t in range(T)])
+    return np.sqrt(np.diag(np.sum(product, axis = 0))) / np.sqrt(T)
 
-    return np.diag(np.sum(product, axis = 0) / T)
+# Only works for univariates for now
+pS = pss
+pST = pst
+rets = returns[0]
+mu = m[sims-1]
+vol = v[sims-1]
+p = pp[sims-1]
 
-
-
+scoreVal = score(pS, pST, rets, mu, vol, p)
+scoreVal
 """
 mu   = m[m.shape[0]-1, :]
 vol  = v[v.shape[0]-1, :]

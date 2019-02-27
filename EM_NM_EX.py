@@ -41,6 +41,25 @@ mu    State dependent returns               (A x S)         Analogous to vol
 
 f     Probability density function          (S x T)         Eq. (V13) pg. 13 and 14
 
+
+
+# ===== Test run, run the following =========== #
+
+1. runEM.py
+2. run the following:
+
+mu     = muFct(pS, y, S, A)
+covm   = varFct(pS, y, mu, S, A)
+f      = fFct(y, mu, covm, S, A, T)
+aR, aS = aFct(T, S, f, p)
+bR     = bFct(T, S, f, p)
+pStar  = pStarFct(T, S, aR, bR)
+pStarT = pStarTFct(f, T, S, aR, aS, bR, p)
+p      = pFct(pStarT, S)
+l      = logLikFct(y, f, p, pStar, pStarT, S)
+
+test   = multEM(y, sims, T, S, A, p, pS)
+
 """
 
 # ----- Mean returns -------------------------- #
@@ -88,7 +107,9 @@ def density(d, dR, covm, A):
 def densityUni(dR, var):
     return 1 / np.sqrt(2 * np.pi * var) * np.exp(-0.5 * dR ** 2 / var)
 
-# Only function where (nopython = True) does not work...
+# Because of np.linalg.det the (nopython = True) is not supported.
+# This has consequences for emMult, which consequently also cannot run
+# in (nopython = True)
 @jit
 def fFct(y, mu, covm, S, A, T):
     """
@@ -125,19 +146,20 @@ def pFct(pST, S):
     Recollect: p[rows, cols]; cols are past state, rows are approaching state
 
     # Old code, in case of break down in test run:
+    """
     p = np.zeros((S, S))
-    
+    den = np.sum(np.sum(pST[:,:,1:], axis = 2), axis = 0)
     for s in range(S):
         p[:,s] = np.sum(pST[:,s,1:], axis = 1) / den[s]
-    """
-    
+
+    """    
     p = np.zeros((S, S)) 
     den = np.sum(np.sum(pST[:,:,1:], axis = 2), axis = 0) # den: denominator
     for s in range(S):
         p[:S-1,s] = np.sum(pST[:S-1,s,1:], axis = 1) / den[s] # 1. 2. 3. see below
     p[S-1,:] = 1 - np.sum(p[:S-1,:], axis = 0) # 2. 3. 4. 5.
 
-    """
+
     1. For each column, build until but not including final row. Final row is a residual
     2. Indexing in Python means e.g. state S = 3 has index 2
     3. Indexing in Python means p[:S-1,:] takes 
@@ -151,7 +173,7 @@ def pFct(pST, S):
     """
 
     return p    
-            
+
 # A. Forward algorithm
 @jit(nopython = True)
 def aFct(T, S, f, p):
@@ -282,8 +304,8 @@ def logLikFct(y, f, p, pS, pST, S):
 # ===== EM Algorithm ========================== #
 # ============================================= #
 
-@jit(nopython = True)
-def multEM(returns, sims, mat, S, A, p, pS):
+@jit
+def multEM(y, sims, T, S, A, p, pS):
     # pS input is only used to initialise the algorithm
 
     # store variances and probabilities
@@ -292,34 +314,34 @@ def multEM(returns, sims, mat, S, A, p, pS):
     vs  = np.zeros((sims, S, A, A))
     ms  = np.zeros((sims, A, S))
 
-    mu  = muFct(pS, returns, S, A)
-    var = varFct(pS, returns, mu, S, A)
+    mu  = muFct(pS, y, S, A)
+    var = varFct(pS, y, mu, S, A)
 
-    f   = fFct(returns, mu, var, S, A, mat)
+    f   = fFct(y, mu, var, S, A, T)
 
-    aR, aS = aFct(mat, S, f, p)
-    bR     = bFct(mat, S, f, p)
+    aR, aS = aFct(T, S, f, p)
+    bR     = bFct(T, S, f, p)
 
-    pStar    = pStarFct(mat, S, aR, bR)
-    pStarT   = pStarTFct(f, mat, S, aR, aS, bR, p)
+    pStar    = pStarFct(T, S, aR, bR)
+    pStarT   = pStarTFct(f, T, S, aR, aS, bR, p)
 
     # 3. EM-loop until convergence (we loop sims amount of times)
     for m in range(sims):
         # Reevaluate parameters given pStar
-        mu  = muFct(pStar, returns, S, A)
-        var = varFct(pStar, returns, mu, S, A)
-        f   = fFct(returns, mu, var, S, A, mat)
+        mu  = muFct(pStar, y, S, A)
+        var = varFct(pStar, y, mu, S, A)
+        f   = fFct(y, mu, var, S, A, T)
         p   = pFct(pStarT, S)
 
         # New smoothed probabilities
-        aR, aS = aFct(mat, S, f, p)
-        bR = bFct(mat, S, f, p)
+        aR, aS = aFct(T, S, f, p)
+        bR = bFct(T, S, f, p)
 
-        pStar  = pStarFct(mat, S, aR, bR)
-        pStarT = pStarTFct(f, mat, S, aR, aS, bR, p)
+        pStar  = pStarFct(T, S, aR, bR)
+        pStarT = pStarTFct(f, T, S, aR, aS, bR, p)
         
         # Compute the log-likelihood to maximise
-        logLik = logLikFct(returns, f, p, pStar, pStarT, S)
+        logLik = logLikFct(y, f, p, pStar, pStarT, S)
 
         # Save parameters for later plotting (redundant wrt optimisation)
         ms[m]   = mu
@@ -330,8 +352,8 @@ def multEM(returns, sims, mat, S, A, p, pS):
     return ms, vs, ps, llh, pStar, pStarT
 
 
-@jit(nopython = True)
-def uniEM(returns, sims, mat, S, p, pS):
+@jit
+def uniEM(y, sims, T, S, p, pS):
     # pS input is only used to initialise the algorithm
 
     # store variances and probabilities
@@ -340,34 +362,34 @@ def uniEM(returns, sims, mat, S, p, pS):
     vs  = np.zeros((sims, S))
     ms  = np.zeros((sims, S))
 
-    mu  = muUniFct(pS, returns, S)
-    var = varUniFct(pS, returns, mu, S)
+    mu  = muUniFct(pS, y, S)
+    var = varUniFct(pS, y, mu, S)
 
-    f   = fFct(returns, mu, var, S, 1, mat)
+    f   = fFct(y, mu, var, S, 1, T)
 
-    aR, aS = aFct(mat, S, f, p)
-    bR     = bFct(mat, S, f, p)
+    aR, aS = aFct(T, S, f, p)
+    bR     = bFct(T, S, f, p)
 
-    pStar    = pStarFct(mat, S, aR, bR)
-    pStarT   = pStarTFct(f, mat, S, aR, aS, bR, p)
+    pStar    = pStarFct(T, S, aR, bR)
+    pStarT   = pStarTFct(f, T, S, aR, aS, bR, p)
 
     # 3. EM-loop until convergence (we loop sims amount of times)
     for m in range(sims):
         # Reevaluate parameters given pStar
-        mu   = muUniFct(pStar, returns, S)
-        var  = varUniFct(pStar, returns, mu, S)
-        f    = fFct(returns, mu, var, S, 1, mat) # A = 1
+        mu   = muUniFct(pStar, y, S)
+        var  = varUniFct(pStar, y, mu, S)
+        f    = fFct(y, mu, var, S, 1, T) # A = 1
         p    = pFct(pStarT, S)
 
         # New smoothed probabilities
-        aR, aS = aFct(mat, S, f, p)
-        bR = bFct(mat, S, f, p)
+        aR, aS = aFct(T, S, f, p)
+        bR = bFct(T, S, f, p)
 
-        pStar  = pStarFct(mat, S, aR, bR)
-        pStarT = pStarTFct(f, mat, S, aR, aS, bR, p)
+        pStar  = pStarFct(T, S, aR, bR)
+        pStarT = pStarTFct(f, T, S, aR, aS, bR, p)
         
         # Compute the log-likelihood to maximise
-        logLik = logLikFct(returns, f, p, pStar, pStarT, S)
+        logLik = logLikFct(y, f, p, pStar, pStarT, S)
 
         # Save parameters for later plotting (redundant wrt optimisation)
         ms[m]   = mu
