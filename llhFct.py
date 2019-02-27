@@ -24,13 +24,16 @@ def densityUni(dR, var):
 
 @jit
 def llhFct(params, y, pS, pST):
+    S = pS.shape[0]  # has shape 5,3
+    A = y.shape[0]  # see above.
+    T = pS.shape[1] # has shape 3,3,425
+    
     mu = params[0]
     covm = params[1]
-    p = params[2]
+    p = np.zeros((S,S))
+    p[:S-1,:] = params[2]
 
-    S = mu.shape[1]  # has shape 5,3
-    A = mu.shape[0]  # see above.
-    T = pST.shape[2] # has shape 3,3,425
+    p[S-1, :] = 1 - np.sum(p[:S-1,:], axis = 0)
     
     """
     d:   determinant
@@ -75,7 +78,9 @@ def llhUniFct(params, y, pS, pST):
 
     mu = params[:S]
     covm = params[S:2*S]
-    p = params[2*S:].reshape(S,S)
+    p = np.zeros((S,S))
+    p[:S-1,:] = params[2*S:].reshape(S-1, S)
+    p[S-1, :] = 1 - np.sum(p[:S-1,:], axis = 0)
     
     """
     d:   determinant
