@@ -14,6 +14,7 @@ import genData as gd
 import MSreturnSim as rs
 from matplotlib import pyplot as plt
 import plotsModule as pltm
+import emPlots as emp
 import EM_NM_EX as em
 import numpy as np
 import pandas as pd
@@ -44,11 +45,19 @@ returns = np.array(excessMRets.T)
 # ===== Parameter initialisation ============== #
 # ============================================= #
 
-emSims = 250 # [EM]-algorithm simulations
-bsSims = 100 # [b]ootstrap[S]ims
+emSims = 200 # [EM]-algorithm simulations
+bsSims = 200 # [b]ootstrap[S]ims
 S      = 3   #  States
 T      = len(returns[0,:]) # time periods
 probs  = np.repeat(1.0 / S, S * S).reshape(S, S)
+"""
+Custom probs does not function
+probs  = np.array([
+    [0.89697538, 0.05411098, 0.23294757],
+    [0.04739963, 0.93846047, 0.        ],
+    [0.05562499, 0.00742855, 0.76705243]
+])
+"""
 
 m   = np.zeros((bsSims, A, S))
 v   = np.zeros((bsSims, S, A, A))
@@ -58,19 +67,20 @@ pSt = np.zeros((bsSims, S, T))
 pSt[0] = np.random.uniform(size = S * T).reshape(S, T)
 
 ms, vs, ps, llh, pStar, pStarT = em.multEM(returns, emSims, T, S, A, probs, pSt[0])
+emp.emPlots(emSims, S, A, rDates, colNames, llh, ps, vs, ms, pStar, plots = 'likelihood')
 
 m[0]   = ms[emSims - 1]
 v[0]   = vs[emSims - 1]
 p[0]   = ps[emSims - 1]
 l[0]   = llh[emSims - 1]
-startReg = np.argmax(pStar[:,0]) + 1 #technicality due to indexing.
+startReg = np.argmax(pStar[:,0]) + 1 #technicality due to indexing
 
 u = np.random.uniform(0, 1, size = bsSims * T).reshape(bsSims, T)
 
 for r in range(1,bsSims):
-    simReturns = rs.returnSim3(S, assets, startReg, m[0], v[0], p[0], T, u[r,:])
+    simReturns = rs.returnSim3(S, A, startReg, m[0], v[0], p[0], T, u[r,:]) # static inputs
 
-    ms, vs, ps, llh, pStar, pStarT = em.multEM(simReturns, emSims, T, S, assets, probs, pSt[0])
+    ms, vs, ps, llh, pStar, pStarT = em.multEM(simReturns, emSims, T, S, A, probs, pSt[0])
 
     m[r]   = ms[emSims - 1]
     v[r]   = vs[emSims - 1]

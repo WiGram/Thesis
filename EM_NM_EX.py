@@ -117,6 +117,10 @@ def fFct(y, mu, covm, S, A, T):
     dR:  demeaned returns
     """
     if A > 1:
+        c  = np.linalg.cholesky(covm)
+        for s in range(S):
+            covm[s] = np.dot(c[s],c[s].T)
+        
         d  = np.linalg.det(covm) # returns a determinant for each state
         dR = np.zeros((S,A,T))   # dR: [d]emeaned [R]eturns
         for s in range(S):

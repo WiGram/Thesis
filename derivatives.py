@@ -48,6 +48,8 @@ def score(pS, pST, rets, mu, vol, p):
     return np.sqrt(np.diag(np.sum(product, axis = 0))) / np.sqrt(T)
 
 # Only works for univariates for now
+
+# Must run univariate model in runEM.py
 pS = pss
 pST = pst
 rets = returns[0]

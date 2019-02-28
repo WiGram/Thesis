@@ -46,7 +46,8 @@ ms, vs, ps, llh, pStar, pStarT = em.multEM(y, sims, T, S, A, p, pS)
 m, v, pp, l, pss, pst = em.uniEM(y[0], sims, T, S, p, pS)
 
 # Plot all
-emp.emPlots(sims, S, A, rDates, colNames, llh, ps, vs, ms, pStar)
+emp.emPlots(sims, S, A, rDates, colNames, llh, ps, vs, ms, pStar, plots = 'likelihood')
+emp.emPlots(sims, S, A, rDates, colNames, llh, ps, vs, ms, pStar, plots = 'all')
 emp.emUniPlots(sims, S, rDates, colNames, l, pp, v, m, pss)
 
 

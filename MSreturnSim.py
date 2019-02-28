@@ -64,14 +64,15 @@ def stateSim3(startReg, probs, T, u):
 
     return state_ms, length
 
-def returnSim3(S, A, startReg, mu, cov, probs, T, u):
-    state_ms, length = stateSim3(startReg, probs, T, u)
+@jit
+def returnSim3(S, A, startReg, mu, cov, probs, T, v):
+    st, length = stateSim3(startReg, probs, T, v)
 
-    returns = np.ones((A, T))
+    rets = np.ones((A, T))
 
     for s in range(S):
-        returns[:, state_ms == s + 1] = np.random.multivariate_normal(mu[:,s], cov[s], length[s]).T
+        rets[:, st == s + 1] = np.random.multivariate_normal(mu[:,s], cov[s], length[s]).T
 
-    return returns
+    return rets
 
 # test = returnSim3(states, assets, startReg, mu, cov, probs, mat, u)
