@@ -1,3 +1,4 @@
+python
 """
 Date:    February 28th, 2019
 Authors: Kristian Strand and William Gram
@@ -13,8 +14,10 @@ tests on the properties of the pseudo-residuals.
 
 import pandas as pd
 import numpy as np
+from scipy import stats
 from scipy.optimize import minimize
 from matplotlib import pyplot as plt
+np.set_printoptions(suppress = True)   # Disable scientific notation
 
 # ============================================= #
 # ===== Model functions ======================= #
@@ -28,10 +31,10 @@ def pValue(testStat, type = 'normal'):
         return ValueError('WIP')
 
 def densityFct(z, mean, vol):
-    return 1 / np.sqrt(2 * np.pi * vol ** 2) * np.exp(-0.5 * (z - mean)**2 / vol ** 2)
+    return 1 / np.sqrt(2.0 * np.pi * vol ** 2) * np.exp(-0.5 * (z - mean)**2 / vol ** 2)
 
 def modelStd(z):
-    return - np.sum(  np.log(densityFct(z, 0, 1)))
+    return - np.sum(  np.log(densityFct(z, 0.0, 1.0)))
 
 def modelNorm(params, z):
     alpha = params[0]  # alpha
@@ -47,8 +50,8 @@ def modelARone(params, z):
     z_lag  = z[0:len(z) - 1]
     #
     alpha = params[0]
-    arOne = params[1]
-    gamma = params[2] # sigma = exp(gamma) <= ensures sigma > 0
+    gamma = params[1] # sigma = exp(gamma) <= ensures sigma > 0
+    arOne = params[2]
     # 
     mean = alpha + arOne * z_lag
     vol  = np.exp(gamma)
@@ -60,9 +63,9 @@ def modelARtwo(params, z):
     z_llag = z[0:len(z) - 2]
     # 
     alpha = params[0]
-    arOne = params[1]
-    arTwo = params[2]
-    gamma = params[3]
+    gamma = params[1]
+    arOne = params[2]
+    arTwo = params[3]
     #
     mean = alpha + arOne*z_lag + arTwo*z_llag
     vol  = np.exp(gamma)
@@ -74,12 +77,12 @@ def modelARtwoS(params, z):
     z_lag  = z[1:len(z) - 1]
     z_llag = z[0:len(z) - 2]
     # 
-    alpha = params[0]
-    arOne = params[1]
-    arTwo = params[2]
-    arOneS = params[3]
-    arTwoS = params[4]
-    gamma = params[5]
+    alpha  = params[0]
+    gamma  = params[1]
+    arOne  = params[2]
+    arTwo  = params[3]
+    arOneS = params[4]
+    arTwoS = params[5]
     #
     mean = alpha + arOne*z_lag + arTwo*z_llag + arOneS*(z_lag**2) + arTwoS*(z_llag**2)
     vol  = np.exp(gamma)
@@ -88,8 +91,8 @@ def modelARtwoS(params, z):
 
 def modelX(params, z, ex):
     alpha = params[0]
-    beta  = params[1]
-    sigma = params[2]
+    sigma = params[1]
+    beta  = params[2]
     #
     mean = alpha + beta * ex
     vol  = sigma
@@ -187,7 +190,7 @@ zs = pd.concat([z11,z01,z10,z11x], axis=1, join_axes=[z11.index])
 
 path = '/home/william/Dropbox/KU/K4/Python/HY3.xlsx'
 xls  = pd.ExcelFile(path)
-zs    = pd.read_excel(xls, 'Sheet5')
+zs   = pd.read_excel(xls, 'Sheet5')
 z11  = zs.iloc[:,1]
 z01  = zs.iloc[:,1]
 z10  = zs.iloc[:,1]
@@ -217,11 +220,21 @@ for ax, title, y in zip(axes.flat, testTitles, pseudoRes):
 
 plt.show()
 
-# Sanity check - three are basically identical: Turns out they just basically are.
-plt.plot(zs.iloc[:,0])
-plt.plot(zs.iloc[:,1])
-plt.plot(zs.iloc[:,3])
+testTitles = np.array(['Z(1,1)','Z(0,1)','Z(1,0)','Z(1,1)(X)'])
+fig, axes = plt.subplots(nrows = 2,ncols = 2,
+                         sharex = True,
+                         sharey = True,
+                         figsize = (15,6))
+pseudoRes = np.array([zs.iloc[:,j] for j in range(zs.shape[1])])
+for ax, title, y in zip(axes.flat, testTitles, pseudoRes):
+    ax.plot(range(zs.shape[0]), y ** 2)
+    ax.set_title(title)
+    ax.grid(False)
+
 plt.show()
+
+
+
 
 # Index 2 (Z10) behaves very differently in variance!! Treat separately
 idx = np.array([0,1,3])
@@ -234,55 +247,65 @@ idx = np.array([0,1,3])
 # ============================================= #
 
 # Initial parameters: Values are guided by sporadic minimisation tests
+llh = pd.DataFrame(np.zeros((4,4)), 
+                   columns = ['Standard','Normal','AR(1)','Ext. AR(2)'], 
+                   index = zs.columns)
+
+t_stat = pd.DataFrame(np.zeros((4,3)), 
+                      columns = ['Normal','AR(1)','Ext. AR(2)'], 
+                      index = zs.columns)
+
+p_val = pd.DataFrame(np.zeros((4,3)), 
+                      columns = ['Normal','AR(1)','Ext. AR(2)'], 
+                      index = zs.columns)
+
+parsN = pd.DataFrame(np.zeros((4,2)), 
+                    columns = ['Mean','Variance'], 
+                    index = zs.columns)
+
+parsO = pd.DataFrame(np.zeros((4,3)), 
+                    columns = ['Mean','Variance','AR(1)'], 
+                    index = zs.columns)
+
+parsT = pd.DataFrame(np.zeros((4,6)), 
+                    columns = ['Mean','Variance','AR(1)','AR(2)','Sq. AR(1)','Sq. AR(2)'], 
+                    index = zs.columns)
+
+# Solver is sensitive to suggestions on these parameters
 parNorm   = np.array([-0.04, 1.0])
-parARone  = np.array([0.04, 0.6, 1.0])
-parARtwoS = np.array([0.05, 0.4, 0.4, -0.1, -0.1, 1.0])
-parX      = np.array([0.5, 0.4, 0.8])
+parARone  = np.array([0.04, 1.0, 0.1])
+parARtwoS = np.array([0.04, 1.0, 0.05, 0.04, 0.03, 0.02])
+parX      = np.array([0.5, 1.0, 0.4])
 
 # Contain lists containing parameters and likelihood values, resp.
-parsN = np.zeros((4,2))
-parsO = np.zeros((4,3))
-parsT = np.zeros((4,6))
-parsX = np.zeros((4,3))
-llhS = np.zeros(4)
-llhN = np.zeros(4)
-llhO = np.zeros(4)
-llhT = np.zeros(4)
-llhX = np.zeros(4)
-tN = np.zeros(4)
-tO = np.zeros(4)
-tT = np.zeros(4)
-tX = np.zeros(4)
 
 method = 'L-BFGS-B'
 for i in range(zs.shape[1]):
     # Standard computation
-    llhS[i] = - modelStd(zs.iloc[i])
+    llh.iloc[i,0]    = -modelStd(zs.iloc[:,i])
     # Normal test
     res = minimize(modelNorm, parNorm, args = zs.iloc[:,i], method = method)
-    parsN[i] = np.hstack(   ( res.x[:1], np.exp(res.x[1]))  )
-    llhN[i] = -res.fun
-    tN[i] = testStat(llhS[i], llhN[i])
+    parsN.iloc[i,:2] = np.hstack(   ( res.x[0], np.exp(res.x[1]))  )
+    llh.iloc[i,1]    = -res.fun
+    t_stat.iloc[i,0] = testStat(llh.iloc[i,0], llh.iloc[i,1])
+    p_val.iloc[i,0]  = 1 - stats.chi2.cdf(t_stat.iloc[i,0], 2)
     # AR(1) test
     res = minimize(modelARone, parARone, args = zs.iloc[:,i], method = method)
-    parsO[i] = np.hstack(   ( res.x[:2], np.exp(res.x[2]) )   )
-    llhO[i] = -res.fun
-    tO[i] = testStat(llhS[i], llhO[i])
+    parsO.iloc[i,:]  = np.hstack(   ( res.x[0], np.exp(res.x[1]), res.x[2:] )   )
+    llh.iloc[i,2]    = -res.fun
+    t_stat.iloc[i,1] = testStat(llh.iloc[i,0], llh.iloc[i,2])
+    p_val.iloc[i,1]  = 1 - stats.chi2.cdf(t_stat.iloc[i,1], 3)
     # AR(2) test with quadratic second lag
     res = minimize(modelARtwoS, parARtwoS, args = zs.iloc[:,i], method = method)
-    parsT[i] = np.hstack(   ( res.x[:5], np.exp(res.x[5]) )   )
-    llhT[i] = -res.fun
-    tT[i] = testStat(llhS[i], llhT[i])
+    parsT.iloc[i,:]  = np.hstack(   ( res.x[0], np.exp(res.x[1]), res.x[2:] )   )
+    llh.iloc[i,3]    = -res.fun
+    t_stat.iloc[i,2] = testStat(llh.iloc[i,0], llh.iloc[i,3])
+    p_val.iloc[i,2]  = 1 - stats.chi2.cdf(t_stat.iloc[i,2], 6)
 
-print(llhS)
-print(llhN)
-print(llhO)
-print(llhT)
 
-print(parsN)
-print(parsO)
-print(parsT)
-
-print(tN)
-print(tO)
-print(tT)
+parsN.round(4)
+parsO.round(4)
+parsT.round(4)
+llh.round(2)
+t_stat.round(2)
+p_val.round(4)
