@@ -97,7 +97,7 @@ def modelX(params, z, ex):
     beta  = params[2]
     #
     mean = alpha + beta * ex
-    vol  = sigma
+    vol  = np.exp(sigma)
     #
     return - np.sum(  np.log(densityFct(z, mean, vol))   )
 
@@ -194,10 +194,13 @@ zs.columns = ['z11','z01','z10','z11x']
 path = '/home/william/Dropbox/KU/K4/Python/HY3.xlsx'
 xls  = pd.ExcelFile(path)
 zs   = pd.read_excel(xls, 'Sheet5')
-z11  = zs.iloc[:,1]
+z11  = zs.iloc[:,0]
 z01  = zs.iloc[:,1]
-z10  = zs.iloc[:,1]
-z11x = zs.iloc[:,1]
+z10  = zs.iloc[:,2]
+z11x = zs.iloc[:,3]
+
+div  = pd.read_excel('/home/william/Dropbox/KU/K4/Python/DivYield.xlsx', 'Monthly')
+div  = div.iloc[:,1]
 
 # test: index 0 should be a number, and column name should be 'z'
 z11[:2]
@@ -244,16 +247,16 @@ plt.show()
 # ============================================= #
 
 # Initial parameters: Values are guided by sporadic minimisation tests
-llh = pd.DataFrame(np.zeros((4,4)), 
-                   columns = ['Standard','Normal','AR(1)','Ext. AR(2)'], 
+llh = pd.DataFrame(np.zeros((4,5)), 
+                   columns = ['Standard','Normal','AR(1)','Ext. AR(2)','Exog.'], 
                    index = zs.columns)
 
-t_stat = pd.DataFrame(np.zeros((4,3)), 
-                      columns = ['Normal','AR(1)','Ext. AR(2)'], 
+t_stat = pd.DataFrame(np.zeros((4,4)), 
+                      columns = ['Normal','AR(1)','Ext. AR(2)','Exog.'], 
                       index = zs.columns)
 
-p_val = pd.DataFrame(np.zeros((4,3)), 
-                      columns = ['Normal','AR(1)','Ext. AR(2)'], 
+p_val = pd.DataFrame(np.zeros((4,4)), 
+                      columns = ['Normal','AR(1)','Ext. AR(2)','Exog.'], 
                       index = zs.columns)
 
 parsN = pd.DataFrame(np.zeros((4,2)), 
@@ -266,6 +269,10 @@ parsO = pd.DataFrame(np.zeros((4,3)),
 
 parsT = pd.DataFrame(np.zeros((4,6)), 
                     columns = ['Mean','Variance','AR(1)','AR(2)','Sq. AR(1)','Sq. AR(2)'], 
+                    index = zs.columns)
+
+parsX = pd.DataFrame(np.zeros((4,3)), 
+                    columns = ['Mean','Variance','Beta_X'], 
                     index = zs.columns)
 
 # Solver is sensitive to suggestions on these parameters
@@ -298,11 +305,20 @@ for i in range(zs.shape[1]):
     llh.iloc[i,3]    = -res.fun
     t_stat.iloc[i,2] = testStat(llh.iloc[i,0], llh.iloc[i,3])
     p_val.iloc[i,2]  = 1 - stats.chi2.cdf(t_stat.iloc[i,2], 6)
+    # Normal with exogenous regressor
+    args = zs.iloc[:,i], div
+    res = minimize(modelX, parX, args = args, method = method)
+    parsX.iloc[i,:]  = np.hstack(   ( res.x[0], np.exp(res.x[1]), res.x[2:] )   )
+    llh.iloc[i,4]    = -res.fun
+    t_stat.iloc[i,3] = testStat(llh.iloc[i,0], llh.iloc[i,4])
+    p_val.iloc[i,3]  = 1 - stats.chi2.cdf(t_stat.iloc[i,3], 3)
+
 
 
 parsN.round(4)
 parsO.round(4)
 parsT.round(4)
+parsX.round(4)
 llh.round(2)
 t_stat.round(2)
 p_val.round(4)

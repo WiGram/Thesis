@@ -36,7 +36,7 @@ def check_sum(weights):
 def get_ret_vol_sr(weights, returns, n):
     """
     Takes in weights, returns array or return,volatility, sharpe ratio
-
+    #
     1. Be observant as to "returns" being well-defined
     2. Be observant as to "n" being well-defined
     """
@@ -57,26 +57,26 @@ def mptPortfolios(sims, returns, assets, frequency = 'm'):
     
     retMeans = returns.mean()
     retCov   = returns.cov()
-
+    #
     weights  = np.random.random(size = (assets, sims))
     colSum   = np.sum(weights, axis = 0)
     weights /= colSum
-
+    #
     pfRet = np.array([np.sum(retMeans * weights[:,i]) * n for i in range(sims)])
     pfVol = np.array([np.sqrt(np.dot(weights[:,i].T, np.dot(retCov * n, weights[:,i]))) for i in range(sims)])
     pfSR  = pfRet / pfVol
-
+    #
     maxSR = pfSR.max()
     maxID = pfSR.argmax()
     maxRet = pfRet[maxID]
     maxVol = pfVol[maxID]
     maxWeights = weights[:,maxID]
-
+    #
     return {'pfVol':pfVol,'pfRet':pfRet,'pfSR':pfSR,'weights':weights,'maxSR':maxSR,'maxRet':maxRet,'maxVol':maxVol,'maxWeights':maxWeights}
 
 """
 TEST:
-mpt = mptPortfolios(1000, returns, assets)
+mpt = mptPortfolios(1000, excessMRets, assets)
 pfVol = mpt['pfVol']
 pfRet = mpt['pfRet']
 pfSR = mpt['pfSR']
@@ -85,45 +85,45 @@ pfWeights = mpt['weights']
 
 def mptScatter(pfVol, pfRet, pfSR, weights, returns, n = 12):
     assets = len(weights[:,0])
-
+    #
     maxID = pfSR.argmax()
     maxRet = pfRet[maxID]
     maxVol = pfVol[maxID]
-
+    #
     frontier_y = np.linspace(pfRet.min(),pfRet.max(),100)
-
+    #
     def minimize_volatility(weights, returns, n):
         return  get_ret_vol_sr(weights, returns, n)[1]
-
+    #
     frontier_volatility = []
-    
+    #
     # 0-1 bounds for each weight
     bounds = np.array([(0,1) for i in range(assets)])
-
+    #
     # Initial Guess (equal distribution)
     init_guess = np.repeat(1 / assets, assets)
-
+    #
     for possible_return in frontier_y:
         # function for return
         cons = ({'type':'eq','fun': check_sum},
                 {'type':'eq','fun': lambda w: get_ret_vol_sr(w, returns, n)[0] - possible_return})
-        
+        #
         result = minimize(minimize_volatility,init_guess,method='SLSQP',bounds=bounds,constraints=cons, args = (returns, n))
-        
+        #
         frontier_volatility.append(result['fun'])
-
+    #
     plt.figure(figsize=(12,8))
     plt.scatter(pfVol, pfRet, c = pfSR, cmap = 'plasma')
     plt.colorbar(label = 'Sharpe Ratio')
     plt.xlabel('Volatility')
     plt.ylabel('Return')
-
+    #
     # Add red dot for max SR
     plt.scatter(maxVol,maxRet,c='red',s=50,edgecolors='black')
-    
+    #
     # Add frontier line
     plt.plot(frontier_volatility,frontier_y,'g--',linewidth=3)
-    
+    #
     plt.show()
 
 """
