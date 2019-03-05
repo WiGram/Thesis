@@ -46,8 +46,8 @@ def modelNorm(params, z):
     return - np.sum(  np.log(densityFct(z, mean, vol))  )
 
 def modelARone(params, z):
-    z_lead = z[1:len(z) - 0]
-    z_lag  = z[0:len(z) - 1]
+    z_lag  = z.shift(1)[1:]
+    z_lead = z[1:]
     #
     alpha = params[0]
     gamma = params[1] # sigma = exp(gamma) <= ensures sigma > 0
@@ -58,9 +58,11 @@ def modelARone(params, z):
     return - np.sum(  np.log(densityFct(z_lead, mean, vol))  )
 
 def modelARtwo(params, z):
-    z_lead = z[2:len(z) - 0]
-    z_lag  = z[1:len(z) - 1]
-    z_llag = z[0:len(z) - 2]
+    z_llag = z.shift(2)[2:]
+    z_lag  = z.shift(1)[2:]
+    z_lead = z[2:]
+    
+    
     # 
     alpha = params[0]
     gamma = params[1]
@@ -73,9 +75,9 @@ def modelARtwo(params, z):
     return - np.sum(  np.log(densityFct(z_lead, mean, vol))  )
 
 def modelARtwoS(params, z):
-    z_lead = z[2:len(z) - 0]
-    z_lag  = z[1:len(z) - 1]
-    z_llag = z[0:len(z) - 2]
+    z_llag = z.shift(2)[2:]
+    z_lag  = z.shift(1)[2:]
+    z_lead = z[2:]
     # 
     alpha  = params[0]
     gamma  = params[1]
@@ -186,6 +188,7 @@ z11x = pd.read_excel(xls, 'Transformed z-score HMMX_11(2)')
 
 # Generate one joint table to iterate through
 zs = pd.concat([z11,z01,z10,z11x], axis=1, join_axes=[z11.index])
+zs.columns = ['z11','z01','z10','z11x']
 """
 
 path = '/home/william/Dropbox/KU/K4/Python/HY3.xlsx'
@@ -232,12 +235,6 @@ for ax, title, y in zip(axes.flat, testTitles, pseudoRes):
     ax.grid(False)
 
 plt.show()
-
-
-
-
-# Index 2 (Z10) behaves very differently in variance!! Treat separately
-idx = np.array([0,1,3])
 
 # ============================================= #
 
