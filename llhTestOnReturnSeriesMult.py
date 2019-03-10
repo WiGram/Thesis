@@ -219,6 +219,10 @@ for i in range(A):
 covmEst = np.dot(cholEst, cholEst.T)
 muEst
 covmEst
+
+aic_normal  = 2 * len(params) + 2 * resNormal.fun  # minus negative of likelihood
+bic_normal  = np.log(y.shape[1])*len(params) + 2 * resNormal.fun
+hqic_normal = 2 * resNormal.fun + 2 * len(params) * np.log(np.log(y.shape[1]))
 # ============================================= #
 
 # ============================================= #
@@ -255,6 +259,10 @@ covmEst = np.dot(cholEst, cholEst.T)
 muEst
 arEst
 covmEst
+
+aic_ar  = 2 * len(params) + 2 * resAR.fun  # minus negative of likelihood
+bic_ar  = np.log(y.shape[1])*len(params) + 2 * resAR.fun
+hqic_ar = 2 * resAR.fun + 2 * len(params) * np.log(np.log(y.shape[1]))
 # ============================================= #
 
 
@@ -299,6 +307,10 @@ covmEst = np.dot(cholEst, cholEst.T)
 muEst
 exEst
 covmEst
+
+aic_ex  = 2 * len(params) + 2 * resX.fun  # minus negative of likelihood
+bic_ex  = np.log(y.shape[1])*len(params) + 2 * resX.fun
+hqic_ex = 2 * resX.fun + 2 * len(params) * np.log(np.log(y.shape[1]))
 # ============================================= #
 
 
@@ -346,4 +358,16 @@ muEst
 arEst
 exEst
 covmEst
+
+aic_ex_ar  = 2 * len(params) + 2 * resXAR.fun  # minus negative of likelihood
+bic_ex_ar  = np.log(y.shape[1])*len(params) + 2 * resXAR.fun
+hqic_ex_ar = 2 * resXAR.fun + 2 * len(params) * np.log(np.log(y.shape[1]))
 # ============================================= #
+
+d = {'Normal':      [resNormal.fun,aic_normal,bic_normal,hqic_normal], 
+     'AR(1)':       [resAR.fun,aic_ar,bic_ar,hqic_ar],
+     'Exog.':       [resX.fun,aic_ex,bic_ex,hqic_ex],
+     'AR(1), Exog.':[resXAR.fun,aic_ex_ar,bic_ex_ar,hqic_ex_ar]}
+df = pd.DataFrame(data = d,index = ['Likelihood Value','AIC','BIC','HQIC'])
+
+# df.to_latex()
