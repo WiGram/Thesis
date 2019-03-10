@@ -61,8 +61,6 @@ def modelARtwo(params, z):
     z_llag = z.shift(2)[2:]
     z_lag  = z.shift(1)[2:]
     z_lead = z[2:]
-    
-    
     # 
     alpha = params[0]
     gamma = params[1]
@@ -100,6 +98,20 @@ def modelX(params, z, ex):
     vol  = np.exp(sigma)
     #
     return - np.sum(  np.log(densityFct(z, mean, vol))   )
+
+def modelARX(params, z, ex):
+    z_lag  = z.shift(1)[1:]
+    z_lead = z[1:]    
+    #
+    alpha = params[0]
+    sigma = params[1]
+    beta  = params[2]
+    arOne = params[3]
+    #
+    mean = alpha + beta * ex + arOne * z_lag
+    vol  = np.exp(sigma)
+    #
+    return - np.sum(  np.log(densityFct(z_lead, mean, vol))   )
 
 
 # ============================================= #
@@ -189,7 +201,7 @@ z11x = pd.read_excel(xls, 'Transformed z-score HMMX_11(2)')
 # Generate one joint table to iterate through
 zs = pd.concat([z11,z01,z10,z11x], axis=1, join_axes=[z11.index])
 zs.columns = ['z11','z01','z10','z11x']
-"""
+
 
 path = '/home/william/Dropbox/KU/K4/Python/HY3.xlsx'
 xls  = pd.ExcelFile(path)
@@ -198,15 +210,24 @@ z11  = zs.iloc[:,0]
 z01  = zs.iloc[:,1]
 z10  = zs.iloc[:,2]
 z11x = zs.iloc[:,3]
-
-div  = pd.read_excel('/home/william/Dropbox/KU/K4/Python/DivYield.xlsx', 'Monthly')
-div  = div.iloc[:,1]
-
+z11v = zs.iloc[:,4]
+z11xv= zs.iloc[:,5]
 # test: index 0 should be a number, and column name should be 'z'
 z11[:2]
 z01[:2]
 z10[:2]
 z11x[:2]
+"""
+
+path = '/home/william/Dropbox/Thesis/Excel/3-HY-2-state-z-score-computations.xlsx'
+xls  = pd.ExcelFile(path)
+zs   = pd.read_excel(xls, 'Sheet1')
+A = len(zs.columns)
+
+div  = pd.read_excel('/home/william/Dropbox/KU/K4/Python/DivYield.xlsx', 'Monthly')
+div  = div.iloc[:,1]
+
+
 # ============================================= #
 
 # ============================================= #
@@ -247,31 +268,31 @@ plt.show()
 # ============================================= #
 
 # Initial parameters: Values are guided by sporadic minimisation tests
-llh = pd.DataFrame(np.zeros((4,5)), 
+llh = pd.DataFrame(np.zeros((A,5)), 
                    columns = ['Standard','Normal','AR(1)','Ext. AR(2)','Exog.'], 
                    index = zs.columns)
 
-t_stat = pd.DataFrame(np.zeros((4,4)), 
+t_stat = pd.DataFrame(np.zeros((A,4)), 
                       columns = ['Normal','AR(1)','Ext. AR(2)','Exog.'], 
                       index = zs.columns)
 
-p_val = pd.DataFrame(np.zeros((4,4)), 
+p_val = pd.DataFrame(np.zeros((A,4)), 
                       columns = ['Normal','AR(1)','Ext. AR(2)','Exog.'], 
                       index = zs.columns)
 
-parsN = pd.DataFrame(np.zeros((4,2)), 
+parsN = pd.DataFrame(np.zeros((A,2)), 
                     columns = ['Mean','Variance'], 
                     index = zs.columns)
 
-parsO = pd.DataFrame(np.zeros((4,3)), 
+parsO = pd.DataFrame(np.zeros((A,3)), 
                     columns = ['Mean','Variance','AR(1)'], 
                     index = zs.columns)
 
-parsT = pd.DataFrame(np.zeros((4,6)), 
+parsT = pd.DataFrame(np.zeros((A,6)), 
                     columns = ['Mean','Variance','AR(1)','AR(2)','Sq. AR(1)','Sq. AR(2)'], 
                     index = zs.columns)
 
-parsX = pd.DataFrame(np.zeros((4,3)), 
+parsX = pd.DataFrame(np.zeros((A,3)), 
                     columns = ['Mean','Variance','Beta_X'], 
                     index = zs.columns)
 

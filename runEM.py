@@ -1,3 +1,4 @@
+python
 """
 Date:    February 11th, 2019
 Authors: Kristian Strand and William Gram
@@ -52,14 +53,10 @@ emp.emUniPlots(sims, S, rDates, colNames, l, pp, v, m, pss)
 
 
 
-
-
-
-
 # Testing standard errors on likelihood function
 # So far without success:
 
-from llhFct import llhFct, llhUniFct
+from llhFct import llhFct, llhUniFct, llhUniSumFct
 
 # Multivariate
 params = ms[sims-1], vs[sims-1], ps[sims-1][:S-1, :]
@@ -67,16 +64,18 @@ args   = y, pStar, pStarT
 llhFct(params, *args)
 
 
-params = m[sims-1], v[sims-1], np.concatenate(pp[sims-1][:S-1,:])
+params = np.concatenate((m[sims-1], v[sims-1], np.concatenate(pp[sims-1][:S-1,:])))
 args = y[0], pss, pst
 
-llhUniFct(np.concatenate(params), *args)
+llhUniSumFct(params, *args)
 
 import numdifftools as nd
 
+hfct = nd.Hessian(llhUniSumFct)
+h = hfct(params, *args)
 
 jacf = nd.Jacobian(llhUniFct)
-jacf(np.concatenate(params), *args)
+j = jacf(params, *args)
 
 
 """

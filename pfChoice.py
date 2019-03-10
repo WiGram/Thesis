@@ -50,12 +50,12 @@ def stateSim(s, u, probs, stateSims):
         s[:,t] = [stateDet(s[m,t-1], u[m,t], probs) for m in range(stateSims)]
     return np.array(s)
 
-def statePaths(stateSims, mat, startstate, probs):
+def statePaths(stateSims, mat, startState, probs):
     u = np.random.uniform(0, 1, size = stateSims * mat).reshape(stateSims, mat)
     s = np.repeat(startState, stateSims * mat).reshape(stateSims, mat) # state process
-
+    #
     s = stateSim(s, u, probs, stateSims) # M x T matrix
-
+    #
     return s
 
 # --------------------------------------------- #
@@ -67,9 +67,9 @@ def assetReturns(s, states, stateSims, retSims, mu, cov):
     M, N      = stateSims, retSims
     l         = np.array([[np.sum(s[m,:] == i + 1) for i in range(states)] for m in range(M)])
     stateFreq = np.array([sum(l[:,i]) for i in range(states)])
-
+    #
     rets      = [np.random.multivariate_normal(mu[:,i], cov[i], size = stateFreq[i] * M * N) for i in range(states)]
-
+    #
     # For first simulated set of states: simulate 100 return paths
     aR = np.zeros((M * N, assets, mat))
     m = 0
@@ -77,7 +77,7 @@ def assetReturns(s, states, stateSims, retSims, mu, cov):
         if i > 0 and i % M == 0:
             m += 1
         aR[i] = np.concatenate([rets[j].T[:,i * l[m, j]:l[m,j]*(i + 1)] for j in range(states)], axis = 1)
-    
+    #
     return aR
 
 # --------------------------------------------- #
@@ -144,7 +144,7 @@ p       = np.repeat(1.0 / states, states * states)
 pS      = np.random.uniform(size = states * mat).reshape(states, mat)
 
 # Running the model and retrieving output
-ms, vs, ps, llh, pStar, pStarT = em.EM(exRets, sims, mat, states, assets, p, pS)
+ms, vs, ps, llh, pStar, pStarT = em.multEM(exRets, sims, mat, states, assets, p, pS)
 
 """
 Glossary:

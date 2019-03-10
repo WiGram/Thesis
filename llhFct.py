@@ -75,43 +75,45 @@ def llhFct(params, y, pS, pST):
 def llhUniFct(params, y, pS, pST):
     S = pS.shape[0]  # has shape 5,3
     T = len(y) # has shape 3,3,425
-
+    #
     mu = params[:S]
     covm = params[S:2*S]
     p = np.zeros((S,S))
     p[:S-1,:] = params[2*S:].reshape(S-1, S)
     p[S-1, :] = 1 - np.sum(p[:S-1,:], axis = 0)
-    
+    #
     """
     d:   determinant
     dR:  demeaned returns
     k:   Some constant containing c and 2pi (see mid of page 14, lecture note 5)
     sum_pIJ: First sum in (V.13) page 13 of lecture note 5
     sum_pJ:  Second sum in (V.13) page 13 of lecture note 5
-    
     """
-
+    #
     dR = np.zeros((S,T))
     for s in range(S):
         dR[s,:] = y - mu[s]
-
+    #
     f  = np.zeros((S, T))
     for s in range(S):
         f[s, :] = densityUni(dR[s,:], covm[s])
-    
-    k = -0.5 * (np.log(2 * np.pi) + 1.0)  # the constant 'c' is set to 1.0
-    
+    #
+    c = 1.0 / T # Arbitrarily set c = some constant, e.g. 1.0 (float)
+    #       
     # first sum (V.13), page 13
-    sum_pIJ = 0
+    sum_pIJ = np.zeros(T)
     for i in range(S):
         for j in range(S):
-            sum_pST = np.sum(pST[j, i, 1:])
-            sum_pIJ += np.log(p[j, i]) * sum_pST
-
+            sum_pIJ[1:] += np.log(p[j, i]) * pST[j, i, 1:]
+    #
     # Second sum (V.13), page 13
-    sum_pJ = 0
+    sum_pJ = np.zeros(T)
     for s in range(S):
-        sum_pJ += np.sum(pS[s, :] * np.log(f[s, :]))
+        sum_pJ += pS[s, :] * np.log(f[s, :])
+    #
+    return c + sum_pIJ + sum_pJ
 
-    return k + sum_pIJ + sum_pJ
+@jit
+def llhUniSumFct(params, y, pS, pST):
+    return np.sum(llhUniFct(params, y, pS, pST))
 

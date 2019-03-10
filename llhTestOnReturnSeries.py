@@ -58,8 +58,6 @@ def modelARtwo(params, z):
     z_llag = z.shift(2)[2:]
     z_lag  = z.shift(1)[2:]
     z_lead = z[2:]
-    
-    
     # 
     alpha = params[0]
     gamma = params[1]
@@ -90,13 +88,30 @@ def modelARtwoS(params, z):
 
 def modelX(params, z, ex):
     alpha = params[0]
-    sigma = params[1]
+    gamma = params[1]
     beta  = params[2]
     #
     mean = alpha + beta * np.array(ex)
-    vol  = np.exp(sigma)
+    vol  = np.exp(gamma)
     #
     return - np.sum(  np.log(densityFct(z, mean, vol))   )
+
+def modelARX(params, z, ex):
+    z_lag  = z.shift(1)[1:]
+    z_lead = z[1:]
+    ex     = ex[1:]
+    #
+    alpha = params[0]
+    gamma = params[1]
+    beta  = params[2]
+    arOne = params[3]
+    #
+    mean = alpha + beta * np.array(ex) + arOne * z_lag
+    vol  = np.exp(gamma)
+    #
+    return - np.sum(  np.log(densityFct(z_lead, mean, vol))   )
+
+
 
 # ============================================= #
 # ===== Data load ============================= #
@@ -116,32 +131,36 @@ div  = div.iloc[:,1]
 # ============================================= #
 
 # Initial parameters: Values are guided by sporadic minimisation tests
-llh = pd.DataFrame(np.zeros((A,5)), 
-                   columns = ['Standard','Normal','AR(1)','Ext. AR(2)','Exog.'], 
+llh = pd.DataFrame(np.zeros((A,6)), 
+                   columns = ['Standard','Normal','AR(1)','Ext. AR(2)','Exog.','AR(1) Exog.'], 
                    index = colNames)
 
-t_stat = pd.DataFrame(np.zeros((A,4)), 
-                      columns = ['Normal','AR(1)','Ext. AR(2)','Exog.'], 
+t_stat = pd.DataFrame(np.zeros((A,5)), 
+                      columns = ['Normal','AR(1)','Ext. AR(2)','Exog.','AR(1) Exog.'], 
                       index = colNames)
 
-p_val = pd.DataFrame(np.zeros((A,4)), 
-                      columns = ['Normal','AR(1)','Ext. AR(2)','Exog.'], 
+p_val = pd.DataFrame(np.zeros((A,5)), 
+                      columns = ['Normal','AR(1)','Ext. AR(2)','Exog.','AR(1) Exog.'], 
                       index = colNames)
 
 parsN = pd.DataFrame(np.zeros((A,2)), 
-                    columns = ['Mean','Variance'], 
+                    columns = ['Mean','Volatility'], 
                     index = colNames)
 
 parsO = pd.DataFrame(np.zeros((A,3)), 
-                    columns = ['Mean','Variance','AR(1)'], 
+                    columns = ['Mean','Volatility','AR(1)'], 
                     index = colNames)
 
 parsT = pd.DataFrame(np.zeros((A,6)), 
-                    columns = ['Mean','Variance','AR(1)','AR(2)','Sq. AR(1)','Sq. AR(2)'], 
+                    columns = ['Mean','Volatility','AR(1)','AR(2)','Sq. AR(1)','Sq. AR(2)'], 
                     index = colNames)
 
 parsX = pd.DataFrame(np.zeros((A,3)), 
-                    columns = ['Mean','Variance','Beta_X'], 
+                    columns = ['Mean','Volatility','Beta_X'], 
+                    index = colNames)
+
+parsARX = pd.DataFrame(np.zeros((A,4)), 
+                    columns = ['Mean','Volatility','Beta_X','AR(1)'], 
                     index = colNames)
 
 # Solver is sensitive to suggestions on these parameters
@@ -149,6 +168,7 @@ parNorm   = np.array([-0.04, 1.0])
 parARone  = np.array([0.04, 1.0, 0.1])
 parARtwoS = np.array([0.04, 1.0, 0.05, 0.04, 0.03, 0.02])
 parX      = np.array([0.5, 1.0, 0.4])
+parARX    = np.array([0.5, 1.0, 0.4, 0.5])
 
 # Contain lists containing parameters and likelihood values, resp.
 
@@ -181,13 +201,22 @@ for i in range(A):
     llh.iloc[i,4]    = -res.fun
     t_stat.iloc[i,3] = testStat(llh.iloc[i,0], llh.iloc[i,4])
     p_val.iloc[i,3]  = 1 - stats.chi2.cdf(t_stat.iloc[i,3], 3)
+    # Normal with exogenous regressor and AR(1)
+    args = y.iloc[:,i], div
+    res = minimize(modelARX, parARX, args = args, method = method)
+    parsARX.iloc[i,:]  = np.hstack(   ( res.x[0], np.exp(res.x[1]), res.x[2:] )   )
+    llh.iloc[i,5]    = -res.fun
+    t_stat.iloc[i,4] = testStat(llh.iloc[i,0], llh.iloc[i,5])
+    p_val.iloc[i,4]  = 1 - stats.chi2.cdf(t_stat.iloc[i,4], 4)
 
 
 
-parsN.round(4)
-parsO.round(4)
-parsT.round(4)
-parsX.round(4)
-llh.round(2)
-t_stat.round(2)
-p_val.round(4)
+# parsN.round(4)
+# parsO.round(4)
+# parsT.round(4)
+# parsX.round(4)
+# parsARX.round(4)
+llh[['Normal','AR(1)','Exog.','AR(1) Exog.']].round(2)
+# t_stat.round(2)
+# p_val.round(4)
+

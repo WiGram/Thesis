@@ -30,44 +30,21 @@ def score(pS, pST, rets, mu, vol, p):
     S = len(mu)
     N = S - 1
     T = len(rets)
-    
     # One derivative for each time period t
     m = np.array([firstMu(pS[s,:], rets, mu[s], vol[s]) for s in range(S)])
     v = np.array([firstVol(pS[s,:], rets[:], mu[s], vol[s]) for s in range(S)])
-
     # For each column j (where we come from)
     # last row i in each column is the residual
     # Returns T-1 matrices of shape (2 x 3) -> last row is not estimated as it is a residual
     pj = np.zeros((N, S, T))
     pj[:,:,1:] = np.array([[firstPj(pST[i,j,1:], pST[N,j,1:], p[i,j], p[N,j]) for j in range(S)] for i in range(N)])
-    
+    #
     score = np.array([np.concatenate((m[:,t], v[:,t], np.concatenate(pj[:,:,t]))) for t in range(T)]).T
-
+    #
     product = np.array([np.outer(score[:,t], score[:,t]) for t in range(T)]) / T
-
+    #
     return np.sqrt(np.diag(np.sum(product, axis = 0))) / np.sqrt(T)
 
-# Only works for univariates for now
-
-# Must run univariate model in runEM.py
-pS = pss
-pST = pst
-rets = returns[0]
-mu = m[sims-1]
-vol = v[sims-1]
-p = pp[sims-1]
-
-scoreVal = score(pS, pST, rets, mu, vol, p)
-scoreVal
-"""
-mu   = m[m.shape[0]-1, :]
-vol  = v[v.shape[0]-1, :]
-p    = np.concatenate(p[p.shape[0]-1, :, :])
-rets = returns[0]
-pS   = pss
-pST  = pst
-test4 = score(pS, pST, rets, mu, vol, p)
-"""
 
 
 # Numerical derivative
@@ -107,7 +84,3 @@ def testFct(x, args):
     b = args[1]
     return - x ** 2 * a + b
 
-args = np.array([2,3])
-
-
-derivative(testFct, 2, args, method = 'central', h = 0.00001)
