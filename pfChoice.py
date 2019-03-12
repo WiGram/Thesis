@@ -1,3 +1,4 @@
+python
 """
 Date:    February 2nd, 2019
 Authors: Kristian Strand and William Gram
@@ -35,40 +36,51 @@ stateDet: Determines state at some point in time
         -> then row 2 (probs[i = 1,:]) belongs to that state
     p:         Uniform random variable (think u when applying)
     probs:     Transition probability matrix
+        -> columns: where we are coming from
+        -> rows:    where we are going to
 """
 
-def stateDet(stateEval, p, probs):
+# --------------------------------------------- #
+# State paths simulation
+@jit(nopython = True)
+def stateDet(startState, stateSims, p, probs):
     S = len(probs[:,0])
-    i = stateEval - 1
-    s = [(np.sum(probs[i,:j]) < p <= np.sum(probs[i,:j+1])) * (j + 1) for j in range(S)]
-    return np.sum(s)
+    s = np.zeros((stateSims, S))
+    for m in range(stateSims):
+        # Each simulation has a t_0 state (python indexing requires '-1')
+        i = int(startState[m] - 1)
+        for j in range(S):
+            # Either the below is false, or true and is then multiplied by (j + 1)
+            s[m,j] = (np.sum(probs[:j,i]) < p[m] <= np.sum(probs[:j+1,i])) * (j + 1)
+    # The row sums return each simulations state; only one digit is non-zero per row
+    return np.sum(s, axis = 1)
 
 """ stateSim: Iterates through time and simulations """
-def stateSim(s, u, probs, stateSims):
-    mat = len(s[0,:])
+@jit(nopython = True)
+def stateSim(startState,u,probs,stateSims,mat):
+    s = np.ones((stateSims,mat)) * startState
     for t in range(1,mat):
-        s[:,t] = [stateDet(s[m,t-1], u[m,t], probs) for m in range(stateSims)]
-    return np.array(s)
-
-def statePaths(stateSims, mat, startState, probs):
-    u = np.random.uniform(0, 1, size = stateSims * mat).reshape(stateSims, mat)
-    s = np.repeat(startState, stateSims * mat).reshape(stateSims, mat) # state process
-    #
-    s = stateSim(s, u, probs, stateSims) # M x T matrix
-    #
+        s[:,t] = stateDet(s[:,t-1],stateSims,u[:,t-1],probs)
     return s
 
 # --------------------------------------------- #
 # Asset return simulation
 """
-Given simulated paths, we can simulate asset returns
+Given simulated state paths, we can simulate asset returns
 """
 def assetReturns(s, states, stateSims, retSims, mu, cov):
-    M, N      = stateSims, retSims
-    l         = np.array([[np.sum(s[m,:] == i + 1) for i in range(states)] for m in range(M)])
-    stateFreq = np.array([sum(l[:,i]) for i in range(states)])
+    S, M, N   = states,stateSims, retSims
+    # Count frequency of each of i states for each of m simulations
+    l = np.ones((M,S))
+    for m in range(M):
+        for i in range(S):
+            l[m,i] = np.sum(s[m,:] == i + 1)
+    # Count frequency of each state across all simulations
+    stateFreq = np.ones(S)
+    for i in range(S):
+        stateFreq[i] = np.sum(l[:,i])
     #
-    rets      = [np.random.multivariate_normal(mu[:,i], cov[i], size = stateFreq[i] * M * N) for i in range(states)]
+    rets      = [np.random.multivariate_normal(mu[:,i], cov[i], size = stateFreq[i]) for i in range(S)]
     #
     # For first simulated set of states: simulate 100 return paths
     aR = np.zeros((M * N, assets, mat))
@@ -86,30 +98,34 @@ def assetReturns(s, states, stateSims, retSims, mu, cov):
 Instead of doing a perfect grid search for investment universes of many assets,
 common practice is to simulate random portfolio weights and evaluate
 """
-def pfWeights(weightSims, assetsPlusBank):
-    w   = np.random.random(assetsPlusBank * weightSims).reshape(assetsPlusBank, weightSims)
-
+@jit(nopython = True)
+def pfWeights(w, assetsPlusBank):
     """ weights that sum to approximately 1.0 for each column """
-    wM = np.array([w[:,i] / np.sum(w[:,i]) for i in range(weightSims)]).T
-
+    weightSims = w.shape[1]
+    wM = np.ones((assetsPlusBank, weightSims))
+    for i in range(weightSims):
+        wM[:,i] = w[:,i] / np.sum(w[:,i])
+    #
     return wM
 
 # --------------------------------------------- #
 # Weighted returns: the best returns will provide the desired portfolio weights
 @jit(nopython = True)
-def weightedReturns(stateSims,retSims,rf,aR,wM,weightSims,mat,gamma, aPb):
+def expectedUtility(stateSims,retSims,rf,aR,wM,weightSims,mat,gamma,aPb):
     M, N, wS = stateSims, retSims, weightSims
-    rM       = np.zeros((M * N, wS)) #[r]eturns[M]atrix
+    uM       = np.zeros((wS, M * N)) #[u]tility[M]atrix
     """
     (1) Returns are compounded across time - sum must be along columns: axis = 1
     (2) We are testing all wS different portfolio weights
     """
-    for m in range(M * N):
-        ret   = [np.sum(wM[:aPb-1,w] * np.exp(np.sum(rf + aR[m], axis = 1))) + wM[aPb-1,w] * np.exp(mat * rf) for w in range(wS)]
-        rM[m] = np.array(ret) ** (1 - gamma) / (1 - gamma)
-        # Find out why we need to transpose
-    
-    return np.sum(rM, axis = 0)
+    for w in range(wS):
+        print(w)
+        for n in range(M * N):
+            uM[w,n]   = (wM[aPb-1,w] * np.exp(mat * rf / 100) + np.sum(wM[:aPb-1,w] * np.exp(np.sum((rf + aR[n,:,:mat])/100.0, axis = 1)))) ** (1 - gamma) / (1 - gamma)
+    #
+    uM = np.sum(uM, axis = 1) / (M * N)
+    #
+    return uM
 # --------------------------------------------- #
 
 # ============================================= #
@@ -123,7 +139,7 @@ end = '2015-09-17'
 """ (Chosen to be the 52 Wk Coupon equivalent of the 30 day T-bill) """
 tbill = quandl.get('USTREASURY/BILLRATES', start_date = bgn, end_date = end)
 tbill = tbill['52 Wk Coupon Equiv']
-rf = np.array(tbill[0] / 252)
+rf = np.array(tbill[0] / 252) * 100
 
 # Asset choice and return computation
 sbl = ['AAPL','DJP','HYG','VBMFX','^GSPC'] # Apply alphabetical order.
@@ -167,19 +183,21 @@ mu    = ms[sims-1] # Size (Asset x states)
 # ============================================= #
 
 startState = 1      # 1: Crash, 2: Slow Growth, 3: Bull
-mat        = 12     # Investment horizon
+mat        = 24     # Investment horizon
 gamma      = 5      # Risk aversion
-stateSims  = 30     # Simulated state paths
-retSims    = 30     # Simulated return processes
-weightSims = 10000       # [w]eight[S]ims
-aPb        = assets + 1 # [a]ssets[P]lus[B]ank
+stateSims  = 100    # Simulated state paths
+retSims    = 1      # Simulated return processes
+weightSims = 10000  # [w]eight[S]ims
+aPb        = A + 1  # [a]ssets[P]lus[B]ank
 
 # --------------------------------------------- #
-def findOptimalWeights(startState, mat, gamma, stateSims, retSims, weightSims, aPb):
-    s  = statePaths(stateSims, mat, startState, probs)    
+def findOptimalWeights(stateSims,mat,startState,probs,states,retSims,mu,rf,cov,weightSims,aPb,gamma):
+    u  = np.random.uniform(0, 1, size = stateSims * mat).reshape(stateSims, mat)
+    w  = np.random.random(aPb * weightSims).reshape(aPb, weightSims)
+    s  = stateSim(startState,u,probs,stateSims,mat)
     aR = assetReturns(s, states, stateSims, retSims, mu, cov)
-    wM = pfWeights(weightSims, aPb)
-    wR = weightedReturns(stateSims,retSims,rf,aR,wM,weightSims,mat,gamma, aPb)
+    wM = pfWeights(w, aPb)
+    uM = expectedUtility(stateSims,retSims,rf,aR,wM,weightSims,mat,gamma,aPb)
 
     return wM, wR
 
@@ -187,3 +205,6 @@ a, b = findOptimalWeights(startState, mat, gamma, stateSims, retSims, weightSims
 
 idx = np.argmax(b)
 a[:,idx]
+
+a = np.linspace(0,10,11)
+a[np.argmax(a)]
