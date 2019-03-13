@@ -65,7 +65,25 @@ w  = np.random.random(size = (ApB, W))
 
 # Read documentation; the following q exits documentation
 help(owm.findOptimalWeights)
-q
 
 # Run final line to retrieve optimal portfolio weights
 eU, uMax, uArgMax, wMax, R, states, wM = owm.findOptimalWeights(M,N,W,T,S,A,rf,G,start,mu,cov,probs,u,w)
+
+data = {'Value': [M,N,W,T,S,G,start]}
+rows = [
+    'Simulated state paths',
+    'Simulated return sets',
+    'Simulated portfolio weights',
+    'Simulated time periods',
+    'Amount of states',
+    'Risk aversion (gamma)',
+    'Start period'
+]
+
+df = pd.DataFrame(data, index = rows)
+pfw = {'Optimal PF weight': wMax}
+rows = colNames.append(pd.Index(['Risk free asset']))
+dfw = pd.DataFrame(pfw, index = rows)
+
+df
+dfw

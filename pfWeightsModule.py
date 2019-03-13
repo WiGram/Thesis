@@ -24,7 +24,7 @@ def pfWeights(w):
     
     Outputs
     -----------------------------------
-    normedW:  (A+1 x ) matrix of weights where columns sum to 1
+    normedW:  (A+1 x W) matrix of weights where columns sum to 1
     """
     
     # Counting how many assets can be invested in
