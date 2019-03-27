@@ -13,7 +13,7 @@ np.set_printoptions(suppress = True)   # Disable scientific notation
 
 @jit(nopython = True)
 def pfWeights(w):
-    """ 
+    """
     Produces
     -----------------------------------
     A set of normalised weights
@@ -33,7 +33,7 @@ def pfWeights(w):
     # Counting how many sets of portfolio weights are to be normalised
     W = w.shape[1]
     
-    # Initialise 
+    # Initialise
     normedW = np.ones((ApB, W))
     for i in range(W):
         normedW[:,i] = w[:,i] / np.sum(w[:,i])

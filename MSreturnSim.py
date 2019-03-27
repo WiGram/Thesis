@@ -1,4 +1,8 @@
-python
+"""
+DEPRECATED:
+see instead simulateSimsReturns.py
+"""
+
 import numpy as np
 from numba import jit
 

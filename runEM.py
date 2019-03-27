@@ -1,4 +1,3 @@
-python
 """
 Date:    February 11th, 2019
 Authors: Kristian Strand and William Gram
@@ -15,6 +14,7 @@ import EM_NM_EX as em
 import emPlots as emp
 import numpy as np
 import pandas as pd
+%matplotlib
 
 prices, monthlyRets, excessMRets, colNames, assets, monthlyVol, retCov, rf, pDates, rDates = gd.genData()
 

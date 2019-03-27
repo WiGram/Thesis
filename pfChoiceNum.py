@@ -18,7 +18,8 @@ from pandas_datareader import data as web
 import genData as gd
 import simulateSimsReturns as ssr
 import pfWeightsModule as pwm
-import expUtilModule as eum
+import expUtilNum as eun
+from scipy import optimize as opt
 np.set_printoptions(suppress=True)   # Disable scientific notation
 
 # ============================================= #
@@ -56,9 +57,8 @@ rf = rf[T-1]     # Risk-free rate in the last period
 start = 1    # Start state, 1: Crash, 2: Slow Growth, 3: Bull
 T = 1        # Investment horizon
 G = 5        # Risk aversion (gamma)
-M = 1000     # Simulated state paths
-N = 1        # Simulated return processes
-W = 10000    # [w]eight[S]ims
+M = 100      # Simulated state paths
+N = 100      # Simulated return processes
 ApB = A + 1  # Assets plus bank account
 Tmax = 120   # Used to compute u for any length
 
@@ -69,25 +69,44 @@ u = np.random.uniform(0,1,(M,Tmax))
 Ret, states = ssr.returnSim(S, M, N, A, start, mu, cov, probs, Tmax, u)
 
 R = list()
-maturities = [1,2,3,6,9,12,18,24,36,48,60,72,84,96,108,120]
+maturities = [1,2,3,4,5,6,7,8,9,10,11,12,15,18,21,24,30,36,42,48,54,60,66,72,78,84,90,96,102,108,114,120]
 
 for mat in maturities:
     R.append(Ret[:,:,:mat])
 
-weights = np.random.random(size = (ApB, W))
-wM = pwm.pfWeights(weights)
+# Contraints
+def check_sum(weights):
+    '''
+    Returns 0 if sum of weights is 1.0
+    '''
+    return np.sum(weights) - 1.0
 
-eU, uMax, uArgMax, wMax = eum.expectedUtility(M,N,W,T,rf,R[0],wM,G,ApB)
-wMax
+# By convention of minimize function it should be a function that returns zero for conditions
+cons = ({'type':'eq','fun': check_sum})
+
+# 0-1 bounds for each weight
+bounds = ((0,1),(0,1),(0,1),(0,1),(0,1),(0,1))
+
+# Initial Guess (equal distribution)
+args = M,N,T,rf,R[0],G
+x = np.ones((100,ApB))
+for i in range(100):
+    w = np.random.random(ApB)
+    x[i] = opt.minimize(eun.expectedUtility, w, args, bounds = bounds, constraints = cons).x
+
+for i in range(ApB):
+    plt.plot(x[:,i])
+
+plt.legend()
+plt.show()
 
 # eU, uMax, uArgMax, wMax, R, states, wM = owm.findOptimalWeights(
 #     M, N, W, T, S, A, rf, G, start, mu, cov, probs, u, w)
 
-data = {'Maturity: {}'.format(T): [M, N, W, T, S, G, start]}
+data = {'Maturity: {}'.format(T): [M, N,T,S,G,start]}
 rows = [
     'Simulated state paths',
     'Simulated return sets',
-    'Simulated portfolio weights',
     'Simulated time periods',
     'Amount of states',
     'Risk aversion (gamma)',
@@ -95,21 +114,21 @@ rows = [
 ]
 
 df = pd.DataFrame(data, index=rows)
-pfw = {'T = {}'.format(T): wMax}
+pfw = {'T = {}'.format(T): x}
 rows = colNames.append(pd.Index(['Risk free asset']))
 rows.name = 'Optimal PF weights'
 dfw = pd.DataFrame(pfw, index=rows)
 
+df
+dfw
+
 maturities = maturities[1:]
-wMax = np.ones((len(maturities), ApB))
+weights = np.ones((len(maturities), ApB))
 
 for i, mat in enumerate(maturities):
-    print(i)
-    eU, uMax, uArgMax, wMax[i] = eum.expectedUtility(
-        M,N,W,mat,rf,R[i],wM,G,ApB
-    )
-    print(uArgMax)
-    dfw['Maturity: {}'.format(mat)] = pd.Series(wMax[i], index=dfw.index)
+    args = M,N,T,rf,R[i+1],G
+    weights[i] = opt.minimize(expectedUtility, w, args, bounds = bounds, constraints = cons).x
+    dfw['Maturity: {}'.format(mat)] = pd.Series(weights[i], index=dfw.index)
 
 
 x = [1] + maturities

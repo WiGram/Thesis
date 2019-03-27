@@ -1,5 +1,5 @@
 """
-Date:    February 2nd, 2019
+Date:    March 13, 2019
 Authors: Kristian Strand and William Gram
 Subject: Finding optimal portfolio weights
 
@@ -20,7 +20,7 @@ np.set_printoptions(suppress = True)   # Disable scientific notation
 
 
 @jit
-def findOptimalWeights(M,N,W,T,S,A,rf,G,start,mu,cov,probs,u,w):
+def findOptimalWeights(M,N,W,T,S,A,rf,G,start,mu,cov,probs,u,w,seed = 12345):
     """
     Produces
     ---------------------------------------------
@@ -63,6 +63,9 @@ def findOptimalWeights(M,N,W,T,S,A,rf,G,start,mu,cov,probs,u,w):
     wM:       (A+1 x W) matrix of weights where columns sum to 1
     """
     
+    # Set random seed number
+    np.random.seed(seed)
+    
     # Produce M*N simulated returns of length T for A assets; (M*N x A x T)
     R, states  = returnSim(S,M,N,A,start,mu,cov,probs,T,u)
     
@@ -76,7 +79,6 @@ def findOptimalWeights(M,N,W,T,S,A,rf,G,start,mu,cov,probs,u,w):
     
     return eU, uMax, uArgMax, wMax, R, states, wM
 
-
 """
 # Test the function by running the below code
 # -----------------------------------------------
@@ -89,15 +91,21 @@ S = 3
 A = 5
 M = 100
 N = 1
-T = 12
+T = 120
+Tmax = 120
 start = 1
+np.random.seed(12345)
 mu = np.random.normal(size = (A,S))
-cov = np.array([np.cov(np.random.normal(size = 5*100).reshape(5,100)) for i in range(S)])
+cov = np.array([np.cov(np.random.normal(size = (5,100))) for i in range(S)])
 probs = np.array([[0.77, 0.56, 0.01],
                   [0.21, 0.90, 0.05],
                   [0.02, 0.04, 0.94]])
 
-u = np.random.uniform(0,1,M * T).reshape(M,T)
+u = np.random.uniform(0,1,(M,Tmax))
+
+### Technicality: findOptimalWeights won't update unless
+### ssr.returnSim() has been called first; find out why?
+R, states = ssr.returnSim(S, M, N, A, start, mu, cov, probs, T, u)
 
 ApB = A + 1
 W = 1000
@@ -109,6 +117,11 @@ rf = 0.19
 G = 5
 ApB = ApB
 
-eU,uMax,uArgMax,wMax,rets,states,allWeights=findOptimalWeights(M,N,W,T,S,A,rf,G,start,mu,cov,probs,u,weights)
+wMax
+eU,uMax,uArgMax,wMax,rets,states,allWeights=findOptimalWeights(
+    M,N,W,T,S,A,rf,G,start,mu,cov,probs,u,weights
+)
+wMax
+
 
 """

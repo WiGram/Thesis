@@ -1,4 +1,3 @@
-python
 """
 Date:    March 10th, 2019
 Authors: Kristian Strand and William Gram

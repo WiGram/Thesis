@@ -1,4 +1,3 @@
-python
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.optimize import minimize
@@ -92,6 +91,9 @@ vv = varVar(params, x)
 
 anHess = np.array([[mm, mv], [mv, vv]])
 anHess = -np.sum(anHess, axis = 2)
+anHess
+hess
+
 hAI = np.linalg.inv(anHess)
 anSe = np.sqrt(np.diag(hAI))
 anSe

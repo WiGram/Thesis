@@ -1,0 +1,63 @@
+Help on module simulateSimsReturns:
+
+NNAAMMEE
+    simulateSimsReturns
+
+DDEESSCCRRIIPPTTIIOONN
+    Date:    March 12th, 2019
+    Authors: Kristian Strand and William Gram
+    Subject: Choosing optimal portfolio weights
+    
+    Description:
+    We intend to find portfolio weights from a CRRA quadratic
+    utility function.
+
+FFUUNNCCTTIIOONNSS
+    rreettuurrnnSSiimm(S, M, N, A, start, mu, cov, probs, T, u, seed=12345)
+        Produces
+        ---------------------------------
+        Simulates M*N matrices (AxT) of return processes for each
+        asset for a lenght of time T;
+        Return processes for risky assets are generated
+        by multivariate normal distribution
+        
+        Inputs
+        ---------------------------------
+        S:     Scalar indicating amount of states
+        M:     Scalar indicating amount of state path simulations
+        N:     Scalar indicating amount of return simulations
+        A:     Scalar indicating amount of risky assets
+        start: Scalar indicating initial state to simulate from
+        mu:    (A x S) matrix of returns for each asset in each state
+        cov:   (S x (A x A)) set of covariance matrices for all states
+        probs: (S x S) Transition probability matrix
+        T:     Scalar simulation length, e.g. T = 12 months
+        u:     (M x T) matrix of random uniform numbers between 0 and 1
+        
+        Returns
+        ---------------------------------
+        returns:  (M*N x A x T) M*N simulated returns of length T for A assets
+        states:   (M x T) M simulated paths of length T
+    
+    ssttaatteeSSiimm(S, M, start, probs, T, u, seed=12345)
+        Produces
+        ---------------------------------
+        Simulates M paths (vectors) of states of length T
+        
+        Inputs
+        ---------------------------------
+        S:     Scalar indicating amount of states
+        M:     Scalar indicating amount of simulations
+        start: Scalar indicating initial state to simulate from
+        probs: (S x S) Transition probability matrix
+        T:     Scalar simulation length, e.g. T = 12 months
+        u:     Matrix (M x T) random uniform numbers between 0 and 1
+        
+        Returns
+        ---------------------------------
+        stateSim:  (M x T) M simulated paths of length T
+        stateFreq: (M x S) M vectors counting frequency of each state
+
+FFIILLEE
+    /home/william/Dropbox/KU/K4/Python/simulateSimsReturns.py
+

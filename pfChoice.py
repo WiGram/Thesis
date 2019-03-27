@@ -4,7 +4,7 @@ Date:    February 2nd, 2019
 Authors: Kristian Strand and William Gram
 Subject: Choosing optimal portfolio weights
 
-Description:
+Description: DEPRECATED
 The script is a prolongation of EM_NM_EX.py, where we intend
 to estimate parameter values based on HMM estimation.
 """
