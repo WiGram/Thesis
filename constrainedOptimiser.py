@@ -30,7 +30,7 @@ scipy.optimize as opt
 import numpy as np
 from scipy import optimize as opt
 
-def constrainedOptimiser(f, w, args, A, method = 'SLSQP'):
+def constrainedOptimiser(f, w, args, ApB, method = 'SLSQP'):
     """
     Constrained optimiser: weights are between 0 and 1.
     Default method set to 'SLSQP' as optimisation is constrained.
@@ -40,7 +40,7 @@ def constrainedOptimiser(f, w, args, A, method = 'SLSQP'):
     f       function to enter into optimiser
     w       weight parameters to optimise (could be some other quantity)
     args    returns, rf, g, T; or some other fct-specific parameters
-    A       amount of assets - necerssary for bounds on weights
+    ApB     amount of assets incl. bank - necessary for bounds on weights
     method  SLSQP unless otherwise specified.
     """
     def check_sum(weights):
@@ -55,7 +55,7 @@ def constrainedOptimiser(f, w, args, A, method = 'SLSQP'):
         '''
         return np.sum(weights) - 1.0
     
-    bnds=tuple(zip(np.zeros(A),np.ones(A)))
+    bnds=tuple(zip(np.zeros(ApB),np.ones(ApB)))
     cons=({'type':'eq','fun': check_sum})
     res=opt.minimize(f,w,args=args,bounds=bnds,constraints=cons,method=method)
     return res
