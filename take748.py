@@ -56,7 +56,7 @@ def expectedUtility(w, returns, rf, g, T):
     return -np.mean(numerator / denominator)
 
 S = 3
-M = 150000
+M = 100000
 N = 1
 A = 1
 T = 120
@@ -117,11 +117,11 @@ weights = np.repeat(0.6,len(maturities))
 
 R = [returns[:,:mat] for mat in maturities]
 
-for g in gamma:
-    for i in range(len(maturities)):
-        args = R[i], rf, g, maturities[i]
-        weights[i] = opt.minimize(expectedUtility, w, args = args, method = method).x
-    plt.plot(maturities[5:], weights[5:])
+#for g in gamma:
+for i in range(len(maturities)):
+    args = R[i], rf, g, maturities[i]
+    weights[i] = opt.minimize(expectedUtility, w, args = args, method = method).x
+plt.plot(maturities[5:], weights[5:])
 plt.show()
 
 
@@ -146,3 +146,10 @@ for i in range(len(maturities)):
 plt.plot(maturities[5:], weights[5:])
 plt.show()
 """
+
+import constrainedOptimiser as copt
+for i in range(len(maturities)):
+    args = R[i], rf, g, A, maturities[i]
+    weights[i] = copt.constrainedOptimiser(expectedUtility,w,args,ApB)
+plt.plot(maturities[5:], weights[5:])
+plt.show()

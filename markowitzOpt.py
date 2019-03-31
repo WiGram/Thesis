@@ -83,47 +83,50 @@ pfSR = mpt['pfSR']
 pfWeights = mpt['weights']
 """
 
-def mptScatter(pfVol, pfRet, pfSR, weights, returns, n = 12):
+def mptScatter(pfVol, pfRet, pfSR, weights, returns, n = 12,path=None):
     assets = len(weights[:,0])
-    #
+    
     maxID = pfSR.argmax()
     maxRet = pfRet[maxID]
     maxVol = pfVol[maxID]
-    #
+    
     frontier_y = np.linspace(pfRet.min(),pfRet.max(),100)
-    #
+    
     def minimize_volatility(weights, returns, n):
         return  get_ret_vol_sr(weights, returns, n)[1]
-    #
+    
     frontier_volatility = []
-    #
+    
     # 0-1 bounds for each weight
     bounds = np.array([(0,1) for i in range(assets)])
-    #
+    
     # Initial Guess (equal distribution)
     init_guess = np.repeat(1 / assets, assets)
-    #
+    
     for possible_return in frontier_y:
         # function for return
         cons = ({'type':'eq','fun': check_sum},
                 {'type':'eq','fun': lambda w: get_ret_vol_sr(w, returns, n)[0] - possible_return})
-        #
+        
         result = minimize(minimize_volatility,init_guess,method='SLSQP',bounds=bounds,constraints=cons, args = (returns, n))
-        #
+        
         frontier_volatility.append(result['fun'])
-    #
+    
     plt.figure(figsize=(12,8))
     plt.scatter(pfVol, pfRet, c = pfSR, cmap = 'plasma')
     plt.colorbar(label = 'Sharpe Ratio')
     plt.xlabel('Volatility')
     plt.ylabel('Return')
-    #
+    
     # Add red dot for max SR
     plt.scatter(maxVol,maxRet,c='red',s=50,edgecolors='black')
-    #
+    
     # Add frontier line
     plt.plot(frontier_volatility,frontier_y,'g--',linewidth=3)
-    #
+    
+    if path != None:
+        plt.savefig(path,bbox_inches = 'tight',pad_inches = 0)
+    
     plt.show()
 
 """

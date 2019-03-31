@@ -9,7 +9,6 @@ also handle other data sets, although those would have to be
 read appropriately before using as input to the genData function.
 """
 
-import markowitzOpt as mpt
 import numpy as np
 import pandas as pd
 import quandl
@@ -27,7 +26,7 @@ np.set_printoptions(suppress = True)   # Disable scientific notation
 # Read data into a Pandas data frame
 
 # def genData(data = 'default', rfData = 'default', gov = 'default'):
-def genData(data = 'default', rfData = 'default'):
+def genData(data = 'default', rfData = 'default',rmSP=True):
 
     if data == 'default':
         data = pd.read_csv(

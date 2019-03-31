@@ -23,29 +23,19 @@ def density(d, dR, covm, A):
 
 def llhFct(params, y):
     A = y.shape[0] # Assets
-    T = y.shape[1]
-    """
-    Påvirker også VAR-matricen.... Husk dette!
-    if VAR == False:
-        T = y.shape[0] # Time periods
-    else:
-        T = y.shape[0] - 1
-    """
-    #
-    mu   = params[0:A]
-    #
+    T = y.shape[1] # Periods
+    
+    mu   = params[:A]
+    
     idx = np.tril_indices(A)     # indexes the triangular matrix elements
     chol = np.zeros((A,A))       # Generates 0 matrix of dim AxA
     chol[idx] = params[A:]       # Fills the lower triangular matrix
     for i in range(A):
         chol[i,i] = np.exp(chol[i,i])  # Ensures positive diagonal
     covm = np.dot(chol, chol.T)  # Construct covariance matrix
-    #
-    """
-    d:   determinant
-    dR:  demeaned returns
-    """
-    #
+    
+    # d:   determinant      #
+    # dR:  demeaned returns #
     d  = np.linalg.det(covm) # returns [det1, det2, ..., detN], N: amount of states
     dR = np.zeros((A,T))
     for a in range(A):

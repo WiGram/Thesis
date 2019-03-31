@@ -98,7 +98,6 @@ def modelX(params, z, ex):
 def modelARX(params, z, ex):
     z_lag  = z.shift(1)[1:]
     z_lead = z[1:]
-    ex     = ex[1:]
     #
     alpha = params[0]
     gamma = params[1]
@@ -174,9 +173,9 @@ parARX    = np.array([0.5, 1.0, 0.4, 0.5])
 method = 'L-BFGS-B'
 for i in range(A):
     # Standard computation
-    llh.iloc[i,0]    = -modelStd(y.iloc[:,i])
+    llh.iloc[i,0]    = -modelStd(y.iloc[1:,i])
     # Normal test
-    res = minimize(modelNorm, parNorm, args = y.iloc[:,i], method = method)
+    res = minimize(modelNorm, parNorm, args = y.iloc[1:,i], method = method)
     parsN.iloc[i,:2] = np.hstack(   ( res.x[0], np.exp(res.x[1]))  )
     llh.iloc[i,1]    = -res.fun
     t_stat.iloc[i,0] = testStat(llh.iloc[i,0], llh.iloc[i,1])
@@ -194,14 +193,14 @@ for i in range(A):
     t_stat.iloc[i,2] = testStat(llh.iloc[i,0], llh.iloc[i,3])
     p_val.iloc[i,2]  = 1 - stats.chi2.cdf(t_stat.iloc[i,2], 6)
     # Normal with exogenous regressor
-    args = y.iloc[:,i], div
-    res = minimize(modelX, parX, args = args, method = method)
+    args = y.iloc[1:,i], div[:len(div)-1]
+    res  = minimize(modelX, parX, args = args, method = method)
     parsX.iloc[i,:]  = np.hstack(   ( res.x[0], np.exp(res.x[1]), res.x[2:] )   )
     llh.iloc[i,4]    = -res.fun
     t_stat.iloc[i,3] = testStat(llh.iloc[i,0], llh.iloc[i,4])
     p_val.iloc[i,3]  = 1 - stats.chi2.cdf(t_stat.iloc[i,3], 3)
     # Normal with exogenous regressor and AR(1)
-    args = y.iloc[:,i], div
+    args = y.iloc[:,i], div[:len(div)-1]
     res = minimize(modelARX, parARX, args = args, method = method)
     parsARX.iloc[i,:]  = np.hstack(   ( res.x[0], np.exp(res.x[1]), res.x[2:] )   )
     llh.iloc[i,5]    = -res.fun
