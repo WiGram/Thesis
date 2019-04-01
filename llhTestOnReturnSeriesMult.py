@@ -13,17 +13,20 @@ import EM_NM_EX as em
 import emPlots as emp
 import numpy as np
 import pandas as pd
+from numba import jit
 from scipy.optimize import minimize
 from scipy import stats
 np.set_printoptions(suppress = True)   # Disable scientific notation
 
 """ Initial functions """
+@jit(nopython=True)
 def density(d, dR, covm, A):
         return 1.0 / np.sqrt( (2.0 * np.pi) ** A * d) * np.exp(-0.5 * dR.T.dot(np.linalg.inv(covm)).dot(dR))
 
+@jit
 def llhFct(params, y):
     A = y.shape[0] # Assets
-    T = y.shape[1] # Periods
+    T = y.shape[1] - 1 # Periods; match with AR models
     
     mu   = params[:A]
     
@@ -39,14 +42,15 @@ def llhFct(params, y):
     d  = np.linalg.det(covm) # returns [det1, det2, ..., detN], N: amount of states
     dR = np.zeros((A,T))
     for a in range(A):
-        dR[a,:] = y[a,:] - mu[a]
-    #
+        dR[a,:] = y[a,1:] - mu[a]
+    
     llh = np.zeros(T)
     for t in range(T):
         llh[t] = density(d, dR[:,t], covm, A)
-    #
+    
     return -np.sum(np.log(llh))
 
+@jit
 def llhFctAR(params, y):
     A = y.shape[0]      # Assets
     T = y.shape[1] - 1  # Due to AR coefficients, the first period is NA
@@ -81,9 +85,11 @@ def llhFctAR(params, y):
     #
     return -np.sum(np.log(llh))
 
+@jit
 def llhFctX(params, y, x):
     A = y.shape[0]  # Assets
-    T = y.shape[1]
+    T = y.shape[1] - 1 # Match with AR models
+    x = x[:len(x)-1]  # Predictive
     #
     mu   = params[0:A]
     #
@@ -104,7 +110,7 @@ def llhFctX(params, y, x):
     d  = np.linalg.det(covm) # returns [det1, det2, ..., detN], N: amount of states
     dR = np.zeros((A,T))
     for a in range(A):
-        dR[a,:] = y[a,:] - mu[a] - beta[a] * x
+        dR[a,:] = y[a,1:] - mu[a] - beta[a] * x
     #
     llh = np.zeros(T)
     for t in range(T):
@@ -112,13 +118,14 @@ def llhFctX(params, y, x):
     #
     return -np.sum(np.log(llh))
 
+@jit
 def llhFctXAR(params, y, x):
     A = y.shape[0]  # Assets
     T = y.shape[1] - 1
     #
     y_lead = y[:,1:]  # Technically this is until T + 1
     y_lag  = y[:,:T]  # T is already subtracted by 1
-    x      = x[1:]    # Make exogenous same dimension as y
+    x      = x[:len(x)-1]   # Make exogenous same dimension as y; predictive
     #
     mu   = params[0:A]
     #
@@ -144,7 +151,17 @@ def llhFctXAR(params, y, x):
     #
     return -np.sum(np.log(llh))
 
+@jit(nopython=True)
+def InfoCrit(params,y,llh):
+    k = len(params)
+    n = (y.shape[1]-1)*y.shape[0]
+    
+    aic  = 2*k + 2*llh  # minus negative of likelihood
+    bic  = np.log(n)*k + 2*llh
+    hqic = 2*llh + 2*k*np.log(np.log(n))
+    return aic,bic,hqic
 """ End of functions """
+
 
 # ============================================= #
 # ===== Generate data ========================= #
@@ -209,9 +226,7 @@ covmEst = np.dot(cholEst, cholEst.T)
 muEst
 covmEst
 
-aic_normal  = 2 * len(params) + 2 * resNormal.fun  # minus negative of likelihood
-bic_normal  = np.log(y.shape[1])*len(params) + 2 * resNormal.fun
-hqic_normal = 2 * resNormal.fun + 2 * len(params) * np.log(np.log(y.shape[1]))
+aic_normal,bic_normal,hqic_normal=InfoCrit(params,y,resNormal.fun)
 # ============================================= #
 
 # ============================================= #
@@ -249,9 +264,7 @@ muEst
 arEst
 covmEst
 
-aic_ar  = 2 * len(params) + 2 * resAR.fun  # minus negative of likelihood
-bic_ar  = np.log(y.shape[1])*len(params) + 2 * resAR.fun
-hqic_ar = 2 * resAR.fun + 2 * len(params) * np.log(np.log(y.shape[1]))
+aic_ar,bic_ar,hqic_ar=InfoCrit(params,y,resAR.fun)
 # ============================================= #
 
 
@@ -297,9 +310,7 @@ muEst
 exEst
 covmEst
 
-aic_ex  = 2 * len(params) + 2 * resX.fun  # minus negative of likelihood
-bic_ex  = np.log(y.shape[1])*len(params) + 2 * resX.fun
-hqic_ex = 2 * resX.fun + 2 * len(params) * np.log(np.log(y.shape[1]))
+aic_ex,bic_ex,hqic_ex=InfoCrit(params,y,resX.fun)
 # ============================================= #
 
 
@@ -348,9 +359,7 @@ arEst
 exEst
 covmEst
 
-aic_ex_ar  = 2 * len(params) + 2 * resXAR.fun  # minus negative of likelihood
-bic_ex_ar  = np.log(y.shape[1])*len(params) + 2 * resXAR.fun
-hqic_ex_ar = 2 * resXAR.fun + 2 * len(params) * np.log(np.log(y.shape[1]))
+aic_ex_ar,bic_ex_ar,hqic_ex_ar=InfoCrit(params,y,resXAR.fun)
 # ============================================= #
 
 d = {'Normal':      [resNormal.fun,aic_normal,bic_normal,hqic_normal], 
@@ -358,5 +367,12 @@ d = {'Normal':      [resNormal.fun,aic_normal,bic_normal,hqic_normal],
      'Exog.':       [resX.fun,aic_ex,bic_ex,hqic_ex],
      'AR(1), Exog.':[resXAR.fun,aic_ex_ar,bic_ex_ar,hqic_ex_ar]}
 df = pd.DataFrame(data = d,index = ['Likelihood Value','AIC','BIC','HQIC'])
+df
+pd.DataFrame([resNormal.fun,resAR.fun,resX.fun,resXAR.fun],index=['Normal','AR','X','ARX'],columns=['Likelihood value'])
 
 # df.to_latex()
+
+
+
+
+

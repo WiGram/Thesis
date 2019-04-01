@@ -96,7 +96,7 @@ def quickEUM(w,returns,rf,g,A,T):
     W = len(w[0,:])
     expUtil = np.zeros(W)
     for i in np.arange(W):
-        expUtil[i] = - expectedUtilityMult(w[:,i],returns,rf,g,A,T) / 100000
+        expUtil[i] = expectedUtilityMult(w[:,i],returns,rf,g,A,T)
     return expUtil
 
 S     = 2

@@ -26,13 +26,9 @@ np.set_printoptions(suppress=True)   # Disable scientific notation
 # ===== Parameter estimation ))))============== #
 # ============================================= #
 
-prices, monthlyRets, excessMRets, colNames, assets, monthlyVol, retCov, rf, pDates, rDates = gd.genData()
+prices, monthlyRets, excessMRets, colNames, A, monthlyVol, retCov, rf, pDates, rDates = gd.genData()
 
 # ===== Monthly excess returns ===== #
-# monthlyRets = monthlyRets.drop(['S&P 500', 'Gov'], axis = 1)
-excessMRets = excessMRets.drop(['S&P 500'], axis=1)
-colNames = excessMRets.columns
-A = len(colNames)  # Assets
 y = np.array(excessMRets.T)  # Returns
 
 trials = 200
@@ -68,3 +64,8 @@ Tmax = 120   # Used to compute u for any length
 np.random.seed(12345)
 u = np.random.uniform(0,1,(M,Tmax))
 Ret, states = ssr.returnSim(S, M, N, A, start, mu, cov, probs, Tmax, u)
+
+returns = np.mean(Ret,axis = 0)
+
+portfolio = pfc.portfolio(colNames,returns,rf)
+portfolio.table

@@ -79,13 +79,27 @@ def expUtil(w, returns, gamma):
     utility = np.sum(W) ** (1 - gamma)/(1-gamma)
     return - utility
 
-def expUtil(w,returns):
+def expUtil2(w,returns):
     W = w * np.exp(np.sum(returns, axis = 0))
     W = np.sum(W)
     utility = W - 0.5 * W ** 2
     return -utility
 
 args = returns
+bnds=tuple(zip(np.zeros(ApB),np.ones(ApB)))
+cons=({'type':'eq','fun': check_sum})
+def check_sum(weights):
+        '''
+        Produces:
+        -------------------------
+        Returns 0 if individual weights sum to 1.0
+        
+        Motivation:
+        -------------------------
+        Applied as a constraint for opt.minimize.
+        '''
+        return np.sum(weights) - 1.0
+
 opt.minimize(expUtil, w, args = args,bounds=bnds,constraints=cons)
 
 w  = np.random.random(size = (2,200))
