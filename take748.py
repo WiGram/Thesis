@@ -55,15 +55,17 @@ def expectedUtility(w, returns, rf, g, T):
     
     return -np.mean(numerator / denominator)
 
-S = 3
-M = 100000
+S = 2
+M = 40000
 N = 1
 A = 1
+ApB=A+1
 T = 120
-start = 3
+start = 2
 rf = 0.3
 g = 5
 
+"""
 # High Yield 3 state
 mu  = np.array([0.72, 0.012, -2.89])
 cov = np.array([1.07, 6.08,  32.24]) 
@@ -80,7 +82,6 @@ probs = np.array([
     [0.95,0.12],
     [0.05,0.88]
 ])
-"""
 
 # ============================================= #
 # ===== Simulate return paths ================= #

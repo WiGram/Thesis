@@ -127,7 +127,7 @@ weights = np.ones((len(maturities), ApB))
 
 for i, mat in enumerate(maturities):
     args = M,N,T,rf,R[i+1],G
-    weights[i] = opt.minimize(expectedUtility, w, args, bounds = bounds, constraints = cons).x
+    weights[i] = opt.minimize(eun.expectedUtility, w, args, bounds = bounds, constraints = cons).x
     dfw['Maturity: {}'.format(mat)] = pd.Series(weights[i], index=dfw.index)
 
 

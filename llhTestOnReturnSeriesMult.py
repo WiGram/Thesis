@@ -162,7 +162,7 @@ def InfoCrit(params,y,llh):
     return aic,bic,hqic
 """ End of functions """
 
-
+"""
 # ============================================= #
 # ===== Generate data ========================= #
 # ============================================= #
@@ -171,9 +171,7 @@ prices, monthlyRets, excessMRets, colNames, assets, monthlyVol, retCov, rf, pDat
 
 # ===== Monthly excess returns ===== #
 # monthlyRets = monthlyRets.drop(['S&P 500', 'Gov'], axis = 1)
-excessMRets = excessMRets.drop(['S&P 500'], axis = 1)
-colNames = excessMRets.columns
-A = len(colNames) # Assets
+A = assets
 y = np.array(excessMRets.T) # Returns
 
 sims = 200
@@ -371,7 +369,7 @@ df
 pd.DataFrame([resNormal.fun,resAR.fun,resX.fun,resXAR.fun],index=['Normal','AR','X','ARX'],columns=['Likelihood value'])
 
 # df.to_latex()
-
+"""
 
 
 
