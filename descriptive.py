@@ -40,8 +40,8 @@ indexedPrices = prices / prices.iloc[0,:] * 100
 
 # Plot index price series
 indexedPrices.plot()
-plt.savefig('/home/william/Dropbox/Thesis/Plots/Prices.png', bbox_inches = 'tight',
-    pad_inches = 0)
+path='/home/william/Dropbox/Thesis/Plots/Prices.png'
+plt.savefig(path,bbox_inches='tight',pad_inches =0)
 plt.show()
 
 # Generate return correlation plots
@@ -55,16 +55,18 @@ g = sns.PairGrid(excessMRets, vars = colNames)
 g = g.map_diag(sns.distplot, fit = stats.norm)
 # g = g.map_offdiag(sns.kdeplot, n_levels=6)
 g = g.map_offdiag(sns.scatterplot)
-plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/HistAndScatterExcess.png', bbox_inches = 'tight',
+path='/home/william/Dropbox/Thesis/Overleaf/images/HistAndScatterExcess.png'
+plt.savefig(path, bbox_inches = 'tight',
     pad_inches = 0)
 plt.show()
 
 # Density plots for each return process
-long_df = excessMRets.stack().reset_index(name = 'Returns')
-long_df = long_df.rename(columns={'level_1':'Asset class',})
-g = sns.FacetGrid(data = long_df, col = 'Asset class', col_wrap = 2, height = 4, aspect = 1.5)
+long_df=excessMRets.stack().reset_index(name = 'Returns')
+long_df=long_df.rename(columns={'level_1':'Asset class',})
+g=sns.FacetGrid(data=long_df,col='Asset class',col_wrap=2,height=4,aspect=1.5)
 g.map(sns.distplot, 'Returns', fit = stats.norm)
-plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/Densities.png', bbox_inches = 'tight',
+path='/home/william/Dropbox/Thesis/Overleaf/images/Densities.png'
+plt.savefig(path, bbox_inches = 'tight',
     pad_inches = 0)
 plt.show()
 
@@ -82,7 +84,8 @@ for ax, title, y in zip(axes.flat, colNames, test):
     ax.legend(loc = 'lower right')
     ax.set_title(title)
     ax.grid(False)
-plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/Returns.png', bbox_inches = 'tight',
+path='/home/william/Dropbox/Thesis/Overleaf/images/Returns.png'
+plt.savefig(path, bbox_inches = 'tight',
     pad_inches = 0)
 plt.show()
 
@@ -92,7 +95,7 @@ fig, axes = plt.subplots(nrows = 3,
                          sharex = True, 
                          sharey = True, 
                          figsize = (14,16))
-fig.text(0.06, 0.5, 'Excess Returns (pct.)', va='center', rotation='vertical')
+fig.text(0.06,0.5,'Excess Returns (pct.)',va='center',rotation='vertical')
 
 test = np.array([excessMRets.iloc[:,i] for i in range(assets)])
 for ax, title, y in zip(axes.flat, colNames, test):
@@ -100,7 +103,8 @@ for ax, title, y in zip(axes.flat, colNames, test):
     ax.legend(loc = 'lower right')
     ax.set_title(title)
     ax.grid(False)
-plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/ExcessReturns.png', bbox_inches = 'tight',
+path='/home/william/Dropbox/Thesis/Overleaf/images/ExcessReturns.png'
+plt.savefig(path, bbox_inches = 'tight',
     pad_inches = 0)
 plt.show()
 
@@ -136,13 +140,14 @@ for ax, title, y in zip(axes.flat, colNames, test):
     ax.legend(loc = 'lower right')
     ax.set_title(title)
     ax.grid(False)
-plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/Vol.png', bbox_inches = 'tight',
+path='/home/william/Dropbox/Thesis/Overleaf/images/Vol.png'
+plt.savefig(path, bbox_inches='tight',
     pad_inches = 0)
 plt.show()
 
-# monthlyVol.plot(subplots = True, layout = (int(assets / 2), 2), figsize = (8,16))
-# plt.savefig('/home/william/Dropbox/Thesis/Plots/Vols.pdf', bbox_inches = 'tight',
-#     pad_inches = 0)
+# monthlyVol.plot(subplots=True,layout=(int(assets / 2), 2),figsize=(8,16))
+# '/home/william/Dropbox/Thesis/Plots/Vols.pdf'
+# plt.savefig(path,bbox_inches='tight',pad_inches=0)
 # plt.show()
 
 # ============================================= #
@@ -162,8 +167,8 @@ for i, txt in enumerate(l):
 plt.grid()
 plt.xlabel("Annualised volatility")
 plt.ylabel("Annualised excess return")
-plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/Sharpes.png', bbox_inches = 'tight',
-    pad_inches = 0)
+path='/home/william/Dropbox/Thesis/Overleaf/images/Sharpes.png'
+plt.savefig(path,bbox_inches='tight',pad_inches=0)
 plt.show()
 
 # ============================================= #
@@ -172,8 +177,8 @@ plt.show()
 
 # Labelling function
 def label(ax, string):
-    ax.annotate(string, (1, 1), xytext=(-8, -8), ha='right', va='top',
-                size=14, xycoords='axes fraction', textcoords='offset points')
+    ax.annotate(string,(1, 1),xytext=(-8, -8), ha='right',va='top',size=14,
+                xycoords='axes fraction',textcoords='offset points')
 
 # Excess returns autocorrelation
 fig, axes = plt.subplots(nrows = 3, 
@@ -185,10 +190,9 @@ fig.tight_layout()
 fig.subplots_adjust(hspace=0.15)
 
 for i, ax, title in zip(range(assets), axes.flat, colNames):
-    smt.graphics.plot_acf(excessMRets.iloc[:,i], lags=30, ax = ax, title = title)
-plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/Autocorrelation.png', 
-            bbox_inches = 'tight',
-            pad_inches = 0)
+    smt.graphics.plot_acf(excessMRets.iloc[:,i],lags=30,ax=ax,title=title)
+path='/home/william/Dropbox/Thesis/Overleaf/images/Autocorrelation.png'
+plt.savefig(path,bbox_inches='tight',pad_inches=0)
 plt.show()
 
 # Squared excess returns autocorrelation
@@ -201,10 +205,9 @@ fig.tight_layout()
 fig.subplots_adjust(hspace=0.15)
 
 for i, ax, title in zip(range(assets), axes.flat, colNames):
-    smt.graphics.plot_acf(abs(excessMRets.iloc[:,i]), lags=30, ax = ax, title = title)
-plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/AutocorrelationSquared.png', 
-            bbox_inches = 'tight',
-            pad_inches = 0)
+    smt.graphics.plot_acf(abs(excessMRets.iloc[:,i]),lags=30,ax=ax,title=title)
+path='/home/william/Dropbox/Thesis/Overleaf/images/AutocorrelationSquared.png'
+plt.savefig(path,bbox_inches='tight',pad_inches = 0)
 plt.show()
 
 
@@ -219,7 +222,7 @@ muNew = sum(test) / len(test)
 sdTest = scipy.stats.tstd(test)
 
 kurt = scipy.stats.kurtosis(test)
-kurtTest = len(test) * sum( (test - muTest) ** 4 ) /(sum((test - muTest) ** 2) ) ** 2
+kurtTest=len(test)*sum( (test - muTest)**4 )/(sum((test - muTest)**2) )**2
 """
 
 # ============================================= #
@@ -231,8 +234,9 @@ mptOutput = mpt.mptPortfolios(sims, excessMRets, assets)
 # The arguments produced in mpt.mptPortfolios
 list(mptOutput.keys())
 
-path = '/home/william/Dropbox/Thesis/Overleaf/images/pfSR.png'
-mpt.mptScatter(mptOutput['pfVol'], mptOutput['pfRet'],mptOutput['pfSR'],mptOutput['weights'],excessMRets, n = 12,path=path)
+path='/home/william/Dropbox/Thesis/Overleaf/images/pfSR.png'
+mpt.mptScatter(mptOutput['pfVol'],mptOutput['pfRet'],mptOutput['pfSR'],
+               mptOutput['weights'],excessMRets,n=12,path=path)
 
 # Fundamental characteristics: highest SR = gradient
 SR = mptOutput['maxSR']
@@ -241,7 +245,7 @@ mptOutput['maxRet'] / mptOutput['maxVol']
 mptOutput['maxWeights']
 
 # Generate x-axis
-sd = np.linspace(start = 0.0, stop = mptOutput['pfVol'].max(),num = sims)
+sd=np.linspace(start=0.0,stop=mptOutput['pfVol'].max(),num=sims)
 
 # Generate Capital Market Line
 mu = SR*sd
@@ -279,19 +283,21 @@ plt.figure(figsize=(12,8))
 plt.plot(sd,mu)
 plt.plot(sd,utility_low)
 plt.plot(sd,utility_hi)
-plt.scatter(mptOutput['pfVol'],mptOutput['pfRet'],c=mptOutput['pfSR'],cmap='plasma')
+plt.scatter(mptOutput['pfVol'],mptOutput['pfRet'],
+            c=mptOutput['pfSR'],cmap='plasma')
 plt.colorbar(label = 'Sharpe Ratio')
 plt.scatter(sd_star_low,mu_star_low,color='red')
-plt.annotate('Weight, low risk aversion: {}'.format(round(weight_low,2)),(sd_star_low,mu_star_low))
+plt.annotate('Weight, low risk aversion: {}'.format(round(weight_low,2)),
+    (sd_star_low,mu_star_low))
 plt.scatter(sd_star_hi,mu_star_hi,color='red')
-plt.annotate('Weight, high risk aversion: {}'.format(round(weight_hi,2)),(sd_star_hi,mu_star_hi))
+plt.annotate('Weight, high risk aversion: {}'.format(round(weight_hi,2)),
+    (sd_star_hi,mu_star_hi))
 plt.ylim(bottom=0,top=10)
 plt.xlim(left=0,right=10)
 plt.xlabel('Volatility')
 plt.ylabel('Return')
-plt.savefig('/home/william/Dropbox/Thesis/Overleaf/images/pfAllocUtility.png',
-            bbox_inches = 'tight',
-            pad_inches = 0)
+path='/home/william/Dropbox/Thesis/Overleaf/images/pfAllocUtility.png'
+plt.savefig(path,bbox_inches='tight',pad_inches=0)
 plt.show()
 
 
