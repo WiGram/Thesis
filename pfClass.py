@@ -3,6 +3,11 @@ import pandas as pd
 import genData as gd
 from scipy import optimize as opt
 import llhTestOnReturnSeriesMult as llhmult
+import simulateSimsReturns as ssr
+import matlab_results as mr
+import constrainedOptimiser as copt
+import expectedUtility947 as eu
+import matplotlib.pyplot as plt
 np.set_printoptions(suppress = True) # scientific non-pandas
 pd.options.display.float_format = '{:.4f}'.format # scientific pandas
 
@@ -79,16 +84,18 @@ class portfolio:
         self.optimal_sr_allocation=df
         
         # Utility optimisation; Non-market pf
-        result_qdr=self.optUtility(gamma=5.,f=self.quadraticUtility)
+        g=5.
+        
+        result_qdr=self.optUtility(gamma=g,f=self.quadraticUtility)
         self.opt_uncons_quad=result_qdr
         
-        result_qdr=self.constrainedOptUtility(gamma=5.,f=self.quadraticUtility)
+        result_qdr=self.constrainedOptUtility(gamma=g,f=self.quadraticUtility)
         self.opt_cons_quad=result_qdr
         
-        result_hpb=self.optUtility(gamma=5.,f=self.hyperbolicUtility)
+        result_hpb=self.optUtility(gamma=g,f=self.hyperbolicUtility)
         self.opt_uncons_hyperbolic=result_hpb
         
-        result_hpb=self.constrainedOptUtility(gamma=5.,f=self.hyperbolicUtility)
+        result_hpb=self.constrainedOptUtility(gamma=g,f=self.hyperbolicUtility)
         self.opt_cons_hyperbolic=result_hpb
         
         # Include exogenous regressor
@@ -209,7 +216,7 @@ class portfolio:
         mu=self.mean_excess
         chol=np.linalg.cholesky(self.retCov/12)  # Cholesky decomp
         for i in range(self.assets):
-            chol[i,i]=np.log(chol[i,i])  # Algorithm will take exp to diagon
+            chol[i,i]=np.log(chol[i,i])  # Algorithm will take exp to diag
         chol_idx=np.tril_indices(self.assets)  # Lower triangle only
         chol_pars=chol[chol_idx]
         
@@ -311,9 +318,60 @@ class portfolio:
         args=gamma
         res=opt.minimize(f,w,args=args,bounds=bnds,constraints=cons)
         return res
+    
+    def simulate_model(
+        self,states=2,sims=50000,mat=360,start=1,
+        mu=mr.mu,cov=mr.cov,probs=mr.probs
+    ):
+        u = np.random.uniform(size=(sims,mat))
+        self.sim_returns,self.sim_states=ssr.returnSim(
+            states,sims,1,self.assets,start,mu,cov,probs,mat,u
+        )
+    
+    def simulate_optimal_weights(self,rf=0.3,g=5.):
+        a=self.assets+1
+        w=np.random.random(a)
+        w/=np.sum(w)
+        gamma=np.array([3,5,7,9,12])
+        self.maturities=np.array([
+            1,2,3,6,9,12,15,18,21,24,30,36,42,48,54,60,72,84,96,108,120,180,240,300,360
+        ])
+        self.opt_sim_weights=np.squeeze(list(zip(
+            [np.repeat(w[i],len(self.maturities)) for i in range(len(w))]
+        ))).T
+        
+        R = [self.sim_returns[:,:,:mat] for mat in self.maturities]
+        
+        #for g in gamma:
+        for i in range(len(self.maturities)):
+            args=R[i],rf,g,self.assets,self.maturities[i]
+            results=copt.constrainedOptimiser(
+                eu.expectedUtilityMult,w,args,self.assets+1
+            )
+            self.opt_sim_weights[i]=results.x
+        self.plot_simulate_optimal_weights()
+    
+    def plot_simulate_optimal_weights(self):
+        labels=np.array(['hy','ig','cm','r2','r1','rf'])
+        for i,lbl in enumerate(labels):
+            plt.plot(
+                self.maturities,self.opt_sim_weights[:,i],label=lbl
+            )
+        plt.ylim(top=1.0,bottom=0.0)
+        plt.grid(b=True)
+        plt.legend(bbox_to_anchor=(0., 1.01, 1., .102), loc=0,
+           ncol=6, mode="expand", borderaxespad=0.,
+           fontsize=10)
+        plt.show()
+
 
 
 pf = portfolio()
+pf.simulate_model()
+pf.simulate_optimal_weights()
+
+
+pf.market_pf_split_cons()
 pf.optimal_sr_allocation
 pf.description_uni
 pf.market_pf_results
@@ -327,7 +385,7 @@ def __optimal_pf_return(self):
     weight_one = np.arange(1.01,step=0.01)
     weight_two = 1.0 - weight_one
     w_zip = list(zip(weight_one,weight_two))
-    pf_rets = np.array([self.pf_return_fct(self.excess_return, np.array((x,y))) for x,y in w_zip])
+    pf_rets=np.array([self.pf_return_fct(self.excess_return,np.array((x,y))) for x,y in w_zip])
     pf_std_dev = np.array([self.pf_std_fct(self.covariance, np.array((x,y))) for x,y in w_zip])
     pf_sr = self.pf_sharpe_fct(pf_rets,pf_std_dev)
     pf_cols = ["{}: {},{}: {}".format(self.tickers[0],x,self.tickers[1],y) for x,y in w_zip]

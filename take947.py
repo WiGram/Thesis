@@ -100,15 +100,19 @@ def quickEUM(w,returns,rf,g,A,T):
     return expUtil
 
 S     = 2
-M     = 50000
+M     = 80000
 N     = 1
-A     = 2
+A     = 5
 ApB   = A + 1
-T     = 120
+T     = 360
 start = 1
 rf    = 0.3
 g     = 7
 seed  = 23456
+
+# llh, mu, cov
+from matlab_results import *
+"""
 muHY  = np.array([0.5902,-0.0451])
 muR1  = np.array([1.1198,-1.1242])
 mu    = np.array((muHY,muR1))
@@ -118,9 +122,10 @@ cov   = np.array([
     [[15.62243,15.34531],
      [15.34531,39.53987]]
 ])
+"""
 probs = np.array([
-    [0.93,0.16],
-    [0.07,0.84]
+    [0.94,0.16],
+    [0.06,0.84]
 ])
 
 # ============================================= #
@@ -134,14 +139,22 @@ returns, states = ssr.returnSim(S,M,N,A,start,mu,cov,probs,T,u,seed=seed)
 # ===== Optimisation for several g's and T's == #
 # ============================================= #
 
-w          = np.array([0.4,0.35,0.25])
+w          = np.random.random(ApB)
+w         /= np.sum(w)
 gamma      = np.array([3,5,7,9,12])
-maturities = np.array([1,2,3,6,9,12,15,18,21,24,30,36,42,48,54,60,72,84,96,108,120])
-weights    = np.array(list(zip(
+maturities = np.array([1,2,3,6,9,12,15,18,21,24,30,36,42,48,54,60,72,84,96,108,120,180,240,300,360])
+weights    = np.squeeze(list(zip(
+    [np.repeat(w[i],len(maturities)) for i in range(len(w))]
+))).T
+"""weights    = np.array(list(zip(
     np.repeat(w[0],len(maturities)),
     np.repeat(w[1],len(maturities)),
-    np.repeat(w[2],len(maturities))
+    np.repeat(w[2],len(maturities)),
+    np.repeat(w[3],len(maturities)),
+    np.repeat(w[4],len(maturities)),
+    np.repeat(w[5],len(maturities))
 )))
+"""
 
 R = [returns[:,:,:mat] for mat in maturities]
 
@@ -150,10 +163,17 @@ for i in range(len(maturities)):
     args = R[i], rf, g, A, maturities[i]
     results = copt.constrainedOptimiser(expectedUtilityMult,w,args,ApB)
     weights[i] = results.x
-plt.plot(maturities, weights[:,0], label = 'hy')
-plt.plot(maturities, weights[:,1], label = 'r1')
-plt.plot(maturities, weights[:,2], label = 'rf')
-plt.legend()
+
+labels=np.array(['hy','ig','cm','r2','r1','rf'])
+for i, lbl in enumerate(labels):
+    plt.plot(
+        maturities,weights[:,i],label=lbl
+    )
+plt.ylim(top=1.0,bottom=0.0)
+plt.grid(b=True)
+plt.legend(bbox_to_anchor=(0., 1.01, 1., .102), loc=0,
+           ncol=6, mode="expand", borderaxespad=0.,
+           fontsize=10)
 plt.show()
 
 # ============================================= #
@@ -226,3 +246,4 @@ plt.show()
 # ============================================= #
 # ===== The end =============================== #
 # ============================================= #
+
