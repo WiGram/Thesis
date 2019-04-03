@@ -332,7 +332,7 @@ class portfolio:
         a=self.assets+1
         w=np.random.random(a)
         w/=np.sum(w)
-        gamma=np.array([3,5,7,9,12])
+        #gamma=np.array([3,5,7,9,12])
         self.maturities=np.array([
             1,2,3,6,9,12,15,18,21,24,30,36,42,48,54,60,72,84,96,108,120,180,240,300,360
         ])
@@ -343,8 +343,8 @@ class portfolio:
         R = [self.sim_returns[:,:,:mat] for mat in self.maturities]
         
         #for g in gamma:
-        for i in range(len(self.maturities)):
-            args=R[i],rf,g,self.assets,self.maturities[i]
+        for i,mat in enumerate(self.maturities):
+            args=R[i],rf,g,self.assets,mat
             results=copt.constrainedOptimiser(
                 eu.expectedUtilityMult,w,args,self.assets+1
             )
@@ -363,7 +363,6 @@ class portfolio:
            ncol=6, mode="expand", borderaxespad=0.,
            fontsize=10)
         plt.show()
-
 
 
 pf = portfolio()
