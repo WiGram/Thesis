@@ -345,7 +345,7 @@ class portfolio:
         #for g in gamma:
         for i,mat in enumerate(self.maturities):
             args=R[i],rf,g,self.assets,mat
-            results=copt.constrainedOptimiser(
+            results=copt.boundedOptimiser(
                 eu.expectedUtilityMult,w,args,self.assets+1
             )
             self.opt_sim_weights[i]=results.x
