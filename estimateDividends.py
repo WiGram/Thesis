@@ -155,8 +155,7 @@ result_if=sm.OLS(
     exog=modelData[['const','div(t-1)']]
 ).fit()
 print(result_if.summary())
-pi_if=result_if.params[1]
-pi_std_if=result_if.bse[1]
+pi_stat_if=result_if.params[1]/result_if.bse[1]
 _=DF_const(pi_stat_if)
 
 # We would reject a unit root in dividend yield on a 10 pct. level.
