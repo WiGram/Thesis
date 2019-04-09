@@ -17,6 +17,7 @@ mpl.style.use('default')
 
 # Run pfClassWIP.py until and including pf=portfolio()
 from pfClassWIP import portfolio
+pf=portfolio()
 prices=pf.prices.iloc[1:,:].copy() # copy makes prices an individual object
 prices['Exogenous']=pf.exogenous
 prices.iloc[:,:5].plot()
