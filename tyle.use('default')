@@ -1,0 +1,23 @@
+Help on function use in module matplotlib.style.core:
+
+uussee(style)
+    Use matplotlib style settings from a style specification.
+    
+    The style name of 'default' is reserved for reverting back to
+    the default style settings.
+    
+    Parameters
+    ----------
+    style : str, dict, or list
+        A style specification. Valid options are:
+    
+        +------+-------------------------------------------------------------+
+        | str  | The name of a style or a path/URL to a style file. For a    |
+        |      | list of available style names, see `style.available`.       |
+        +------+-------------------------------------------------------------+
+        | dict | Dictionary with valid key/value pairs for                   |
+        |      | `matplotlib.rcParams`.                                      |
+        +------+-------------------------------------------------------------+
+        | list | A list of style specifiers (str or dict) applied from first |
+        |      | to last in the list.                                        |
+        +------+-------------------------------------------------------------+

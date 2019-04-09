@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from pandas import DataFrame
+from pandas import DataFrame,Series
 import genData as gd
 from scipy import optimize as opt
 from llhTestOnReturnSeriesMult import llhFct,llhFctAR,llhFctX,llhFctXAR,InfoCrit
@@ -169,7 +169,6 @@ class portfolio:
             results=opt.minimize(f,w,args=args,bounds=bnds,constraints=cons)
             return results
     
-    
     def __check_sum(self,weights):
         '''
         Produces:
@@ -325,13 +324,17 @@ class portfolio:
             states,sims,1,self.assets,start,mu,cov,probs,mat,u
         )
     
-    def sim_opt_weights(self,rf=0.3,g=5.,bnd=True):
+    def sim_opt_weights(
+        self,rf=0.3,g=5.,bnd=True,
+        states=2,sims=50000,mat=360,start=1,
+        mu=mr.mu,cov=mr.cov,probs=mr.probs
+    ):
         try:
             rets=self.sim_returns
         except:
             u = np.random.uniform(size=(50000,360))
             self.sim_returns, self.sim_states=ssr.returnSim(
-                2,50000,1,self.assets,1,mr.mu,mr.cov,mr.probs,360,u
+                states,sims,1,self.assets,start,mu,cov,probs,mat,u
             )
             rets=self.sim_returns
         
@@ -391,6 +394,44 @@ class portfolio:
         plt.show()
 
 
+
+
+
 pf = portfolio()
+"""
 pf.simulate_model()
-pf.sim_opt_weights(bnd=True)
+#pf.sim_opt_weights(bnd=True)
+
+def plot_simulated_returns(self,returns):
+    returns=pf.sim_returns
+    labels=np.array(['hy','ig','cm','r2','r1'])
+    titles=np.array([
+        'High Yield','Investment Grade','Commodities',
+        'Russell 2000','Russell 1000'
+    ])
+    dic={}
+    for i,l in enumerate(labels):
+        dic[l]=DataFrame(
+            returns[:1000,i,:]*12
+        )
+
+    fig,axes=plt.subplots(
+        nrows=3,ncols=2,sharex=True,figsize=(15,15)
+    )
+    for ax,l,t in zip(axes.flat,labels,titles):
+        ax.set_title(t)
+        ax.plot(
+            dic[l].T,color='grey',alpha=0.3
+        )
+        ax.plot(
+            dic[l].iloc[25,:],color='blue',alpha=.7
+        )
+        ax.plot(
+            dic[l].quantile(.025),color='black',linestyle='dashed',alpha=.7
+        )
+        ax.plot(
+            dic[l].quantile(.975),color='black',linestyle='dashed',alpha=.7
+        )
+        ax.plot(np.array(pf.excessMRets.iloc[:360,i]))
+    plt.show()
+"""
