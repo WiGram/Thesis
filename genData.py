@@ -30,7 +30,8 @@ def genData(data = 'default', rfData = 'default',rmSP=True):
 
     if data == 'default':
         data = pd.read_csv(
-            '/home/william/Dropbox/Thesis/mthReturns.csv', 
+            # '/home/william/Dropbox/Thesis/mthReturns.csv', 
+            'C:/Users/willi/Dropbox/Thesis/mthReturns.csv',
             index_col=0,
             header=0)
         colNames = ['High Yield','Investment Grade','Commodities','Russell 2000','Russell 1000','S&P 500']
@@ -43,7 +44,8 @@ def genData(data = 'default', rfData = 'default',rmSP=True):
     
     if rfData == 'default':
         rfData = pd.read_csv(
-            '/home/william/Dropbox/Thesis/rf.csv',
+            # '/home/william/Dropbox/Thesis/rf.csv',
+            'C:/Users/willi/Dropbox/Thesis/rf.csv',
             index_col=0,
             header=0
         )

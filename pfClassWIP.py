@@ -31,7 +31,8 @@ class portfolio:
         # End of initial data generation
         
         # Include exogenous regressor
-        path='/home/william/Dropbox/KU/K4/Python/DivYield.xlsx'
+        # path='/home/william/Dropbox/KU/K4/Python/DivYield.xlsx'
+        path='C:/Users/willi/Dropbox/KU/K4/Python/DivYield.xlsx'
         x  = pd.read_excel(path, 'Monthly')
         self.exogenous  = np.array(x.iloc[:,1])
         # End of inclusion of exogenous
@@ -66,6 +67,32 @@ class portfolio:
         
         self.utility_table=self.__utility_fcts()
         
+        self.sim_returns={'States=2':{},'States=3':{}}
+        self.sim_states={'States=2':{},'States=3':{}}
+        
+        self.opt_weights_unbounded={
+            'States=2':{
+                'Start=1':{},
+                'Start=2':{}
+            },
+            'States=3':{
+                'Start=1':{},
+                'Start=2':{},
+                'Start=3':{}
+            }
+        }
+        self.opt_weights_bounded={
+            'States=2':{
+                'Start=1':{},
+                'Start=2':{}
+            },
+            'States=3':{
+                'Start=1':{},
+                'Start=2':{},
+                'Start=3':{}
+            }
+        }
+    
     def __optimal_sr_allocation(self):
         """
         Computes weight allocation between the market portfolio
@@ -81,7 +108,7 @@ class portfolio:
         
         # --- The unconstrained allocation --- #
         un_weights,un_mu,un_sd,un_sr = self.__market_pf_split(cons=False)
-        
+
         rf_weight=1-un_weights
         mp_weight=un_weights*self.opt_market_pf.x
         
@@ -207,7 +234,7 @@ class portfolio:
         std=self.__pf_std_fct(weights,self.retCov)
         sr=self.__pf_sharpe_fct(returns,std)
         
-        u=sr**2/(2*c)
+        #u=sr**2/(2*c)
         sd=sr/c
         mu=sr*sd
         
@@ -271,7 +298,7 @@ class portfolio:
         aicXAR,bicXAR,hqicXAR=InfoCrit(pars,y,resXAR.fun)
         
         # ===== Summary statistics ================== #
-        dic={'Normal':  [resN.fun,aicN,bicN,hqicN], 
+        dic={'Normal':  [resN.fun,aicN,bicN,hqicN],
              'AR(1)' :  [resAR.fun,aicAR,bicAR,hqicAR],
              'Exog.' :  [resX.fun,aicX,bicX,hqicX],
              'AR(1), Exog.' :   [resXAR.fun,aicXAR,bicXAR,hqicXAR]}
@@ -320,23 +347,46 @@ class portfolio:
         mu=mr.mu,cov=mr.cov,probs=mr.probs
     ):
         u = np.random.uniform(size=(sims,mat))
-        self.sim_returns,self.sim_states=ssr.returnSim(
+        sim_returns,sim_states=ssr.returnSim(
             states,sims,1,self.assets,start,mu,cov,probs,mat,u
         )
+        
+        self.sim_returns[
+            'States={}'.format(states)
+        ][
+            'Start={}'.format(start)
+        ]=sim_returns
+        
+        self.sim_states[
+            'States={}'.format(states)
+        ][
+            'Start={}'.format(start)
+        ]=sim_states
     
     def sim_opt_weights(
         self,rf=0.3,g=5.,bnd=True,
         states=2,sims=50000,mat=360,start=1,
         mu=mr.mu,cov=mr.cov,probs=mr.probs
     ):
-        try:
-            rets=self.sim_returns
-        except:
-            u = np.random.uniform(size=(50000,360))
-            self.sim_returns, self.sim_states=ssr.returnSim(
-                states,sims,1,self.assets,start,mu,cov,probs,mat,u
-            )
-            rets=self.sim_returns
+        if len(self.sim_returns[
+            'States={}'.format(states)][
+                'Start={}'.format(start)
+            ])==0:
+                self.simulate_model(
+                    states=states,sims=sims,mat=mat,start=start,
+                    mu=mr.mu,cov=mr.cov,probs=mr.probs
+                )
+                rets=self.sim_returns[
+                    'States={}'.format(states)
+                ][
+                    'Start={}'.format(start)
+                ]
+        else:
+            rets=self.sim_returns[
+                'States={}'.format(states)
+            ][
+                'Start={}'.format(start)
+            ]
         
         a=self.assets+1
         w=np.random.random(a)
@@ -347,57 +397,81 @@ class portfolio:
             15,18,21,24,
             30,36,42,48,
             54,60,72,84,
-            96,108,120,
-            180,240,300,360
+            96,108,120
         ])
-        labels=np.array(['hy','ig','cm','r2','r1','rf'])
+        # labels=np.array(['hy','ig','cm','r2','r1','rf'])
+        labels=np.hstack((self.colNames,'Risk Free'))
         weights=np.squeeze(list(zip(
             [np.repeat(w[i],len(maturities)) for i in range(len(w))]
         ))).T
         
         R = [rets[:,:,:mat] for mat in maturities]
         
-        if bnd==True:
+        if bnd:
             #for g in gamma:
             for i,mat in enumerate(maturities):
                 args=R[i],rf,g,self.assets,mat
                 results=copt.boundedOptimiser(
-                    eu.expectedUtilityMult,w,args,self.assets+1
+                    eu.expectedUtilityMult,w,args,a
                 )
                 weights[i]=results.x
-            self.opt_weights_unbounded = DataFrame(
-                weights,index=maturities,columns=labels
-            )
+            for i,asset in enumerate(labels):
+                try:
+                    self.opt_weights_bounded[
+                        'States={}'.format(states)
+                    ][
+                        'Start={}'.format(start)
+                    ][
+                        asset
+                    ][
+                        'gamma={}'.format(g)
+                    ] = weights[:,i]
+                except:
+                    self.opt_weights_bounded[
+                        'States={}'.format(states)
+                    ][
+                        'Start={}'.format(start)
+                    ][
+                        asset
+                    ]=pd.DataFrame(
+                        weights[:,i],columns=['gamma={}'.format(g)],index=maturities
+                    )
         else:
             for i,mat in enumerate(maturities):
                 args=R[i],rf,g,self.assets,mat
                 results=copt.unboundedOptimiser(
-                    eu.expectedUtilityMult,w,args,self.assets+1
+                    eu.expectedUtilityMult,w,args,a
                 )
                 weights[i]=results.x
-            self.opt_weights_bounded = DataFrame(
-                weights,index=maturities,columns=labels
-            )
-        self.plot_simulate_optimal_weights(bnd=bnd)
-    
-    def plot_simulate_optimal_weights(self,bnd=True):
-        if bnd==True:
-            self.opt_weights_bounded.plot()
-        else:
-            self.opt_weights_unbounded.plot()
-        plt.ylim(top=1.0,bottom=0.0)
-        plt.grid(b=True)
-        plt.tight_layout()
-        plt.legend(bbox_to_anchor=(0., 1.01, 1., .102), loc=0,
-        ncol=6, mode="expand", borderaxespad=0.,
-        fontsize=10)
-        plt.show()
-
-
-
+            for i,asset in enumerate(labels):
+                try:
+                    self.opt_weights_unbounded[
+                        'States={}'.format(states)
+                    ][
+                        'Start={}'.format(start)
+                    ][
+                        asset
+                    ][
+                        'gamma={}'.format(g)
+                    ] = weights[:,i]
+                except:
+                    self.opt_weights_unbounded[
+                        'States={}'.format(states)
+                    ][
+                        'Start={}'.format(start)
+                    ][
+                        asset
+                    ]=pd.DataFrame(
+                        weights[:,i],columns=['gamma={}'.format(g)],index=maturities
+                    )
 
 
 pf = portfolio()
+pf.simulate_model()
+for s in range(1,3):
+    for g in np.array([3,5,7,9]):
+        pf.sim_opt_weights(start=s,g=g)
+
 """
 pf.simulate_model()
 #pf.sim_opt_weights(bnd=True)
