@@ -25,12 +25,12 @@ class portfolio:
         self.rf=data[7]
         self.pDates=data[8]
         self.rDates=data[9]
-        
+
         # Historical moments and Sharpe Ratio
         self.mean_excess=self.excessMRets.mean()
         self.std_excess=self.excessMRets.std()
         self.sr_excess=self.pf_sharpe_fct(self.mean_excess,self.std_excess)
-        
+
         # Table over historical moments and Sharpe Ratio
         description = pd.concat(
             [self.mean_excess,
@@ -40,87 +40,88 @@ class portfolio:
             join_axes=[self.mean_excess.index]).transpose()
         description.index = ['Mean','Std','SR']
         self.description_uni=description
-        
+
         # Historical Sharpe Ratio optimisation
         #  Shorting allowed
         self.market_pf_results=self.market_pf()
-        
+
         risk_free_split_market_pf = self.market_pf_split_uncons()
-        
+
         un_mu=risk_free_split_market_pf[1]
         un_sd=risk_free_split_market_pf[2]
         un_sr=un_mu/un_sd
-        
+
         un_weights=risk_free_split_market_pf[0]
-        
+
         rf_weight=1-un_weights
         mp_weight=un_weights*self.market_pf_results.x
-        
+
         un_weights=np.hstack((mp_weight,rf_weight))
-        
+
         #  No shorting allowed
         self.constrained_market_pf_results=self.constrained_market_pf()
-        
+
         risk_free_split_market_pf=self.market_pf_split_cons()
-        
+
         con_mu=risk_free_split_market_pf[1]
         con_sd=risk_free_split_market_pf[2]
         con_sr=con_mu/con_sd
-        
+
         con_weights=risk_free_split_market_pf[0]
-        
+
         rf_weight=1-con_weights
         mp_weight=con_weights*self.constrained_market_pf_results.x
-        
+
         con_weights=np.hstack((mp_weight,rf_weight))
-        
+
         # Combining unconstrained and constrained (rows)
         d={'Unconstrained':(un_mu,un_sd,un_sr,*un_weights),
             'Constrained':(con_mu,con_sd,con_sr,*con_weights)}
         idx=('Return','Standard Deviation','Sharpe Ratio',
         'HY','IG','Comm','R2000','R1000','RF')
-        
+
         df = pd.DataFrame(d,index=idx)
         self.optimal_sr_allocation=df
-        
+
         # Utility optimisation; Non-market pf
         g=5.
-        
+
         result_qdr=self.optUtility(gamma=g,f=self.quadraticUtility)
         self.opt_uncons_quad=result_qdr
-        
+
         result_qdr=self.constrainedOptUtility(gamma=g,f=self.quadraticUtility)
         self.opt_cons_quad=result_qdr
-        
+
         result_hpb=self.optUtility(gamma=g,f=self.hyperbolicUtility)
         self.opt_uncons_hyperbolic=result_hpb
-        
+
         result_hpb=self.constrainedOptUtility(gamma=g,f=self.hyperbolicUtility)
         self.opt_cons_hyperbolic=result_hpb
-        
+
         # Include exogenous regressor
-        path='/home/william/Dropbox/KU/K4/Python/DivYield.xlsx'
+        #path='/home/william/Dropbox/KU/K4/Python/DivYield.xlsx'
+        path='C:/Users/willi/Dropbox/KU/K4/Python/DivYield.xlsx'
         x  = pd.read_excel(path, 'Monthly')
         self.exogenous  = np.array(x.iloc[:,1])
-        
+
         # Likelihood values
         self.mult_N_results = self.llhMult()
-    
+
     def pf_return_fct(self,weights,returns):
         if len(weights) != returns.shape[0]:
             msg='Weights should have dimension (1x{}'.format(returns.shape[0])
             raise TypeError(msg)
         return weights.dot(returns)
-    
+
     def pf_std_fct(self,weights,cov):
         if len(weights) != cov.shape[1]:
             msg='Weights should have dimension ({}x1)'.format(cov.shape[1])
             raise TypeError(msg)
         return np.sqrt(weights.dot(cov.dot(weights)))
-    
+
     def pf_sharpe_fct(self,returns,std):
         return returns / std
-    
+
     def portfolio_return(self,weights):
         pf_rets = self.pf_return_fct(weights,self.mean_excess)
         pf_standard_dev = self.pf_std_fct(weights,self.retCov)
@@ -129,26 +130,26 @@ class portfolio:
                                columns = ['Portfolio'],
                                index = self.description_uni.index)
         return pf_table
-    
+
     def market_pf(self):
         weights=self.mk_weights()
         f = lambda w,x,y: - self.pf_return_fct(w,x) / self.pf_std_fct(w,y)
         args = self.mean_excess,self.retCov
         results = opt.minimize(f,weights,args)
         return results
-    
+
     def check_sum(self,weights):
         '''
         Produces:
         -------------------------
         Returns 0 if individual weights sum to 1.0
-        
+
         Motivation:
         -------------------------
         Applied as a constraint for opt.minimize.
         '''
         return np.sum(weights) - 1.0
-    
+
     def mk_weights(self,a=None):
         if np.any(a==None):
             a=self.assets
@@ -159,7 +160,7 @@ class portfolio:
             weights=np.random.random(a)
             weights/=np.sum(weights)
             return weights
-    
+
     def constrained_market_pf(self,ret=None,cov=None):
         w=self.mk_weights()
         g=self.check_sum
@@ -177,41 +178,41 @@ class portfolio:
             args=ret, cov
             res=opt.minimize(f,w,args=args,bounds=bnds,constraints=cons)
             return res
-    
+
     def market_pf_split_cons(self,c=0.5):
         weights=self.constrained_market_pf_results.x
         returns=self.pf_return_fct(weights,self.mean_excess)
         std=self.pf_std_fct(weights,self.retCov)
         sr=self.pf_sharpe_fct(returns,std)
-        
+
         u=sr**2/(2*c)
         sd=sr/c
         mu=sr*sd
-        
+
         opt_weight=mu/returns
-        
+
         return opt_weight,mu,sd
-        
+
     def market_pf_split_uncons(self,c=0.5):
         weights=self.market_pf_results.x
         returns=self.pf_return_fct(weights,self.mean_excess)
         std=self.pf_std_fct(weights,self.retCov)
         sr=self.pf_sharpe_fct(returns,std)
-        
+
         u=sr**2/(2*c)
         sd=sr/c
         mu=sr*sd
-        
+
         opt_weight=mu/returns
-        
+
         return opt_weight,mu,sd
-    
+
     def llhMult(self):
         # Renaming for brevity
         y=np.array(self.excessMRets.T/12)
         x=self.exogenous
         a=self.assets
-        
+
         # Moments
         mu=self.mean_excess
         chol=np.linalg.cholesky(self.retCov/12)  # Cholesky decomp
@@ -219,96 +220,96 @@ class portfolio:
             chol[i,i]=np.log(chol[i,i])  # Algorithm will take exp to diag
         chol_idx=np.tril_indices(self.assets)  # Lower triangle only
         chol_pars=chol[chol_idx]
-        
+
         # Optimisation method
         m = 'L-BFGS-B'
-        
+
         # ===== Normal multivariate likelihood ====== #
         pars=np.concatenate((mu,chol_pars))
-        
+
         llhmult.llhFct(pars,y)
-        
+
         # Optimisation
         resN=opt.minimize(llhmult.llhFct,pars,args=y,method=m)
-        
+
         # Information Criteria
         aicN,bicN,hqicN=llhmult.InfoCrit(pars,y,resN.fun)
-        
+
         # ===== AR multilvariate likelihood ========= #
         ar=np.random.uniform(low=0.1, high=0.3, size=a)
         pars=np.concatenate((mu,ar,chol_pars))
-        
+
         llhmult.llhFctAR(pars,y)  # empty calc to initialise numba
-        
+
         # Optimisation
         resAR=opt.minimize(llhmult.llhFctAR,pars,y,method=m)
-        
+
         # Information Criteria
         aicAR,bicAR,hqicAR=llhmult.InfoCrit(pars,y,resAR.fun)
-        
+
         # ===== Exogenous multivariate likelihood === #
         ex=np.random.uniform(low=0.1,high=0.3,size=a)
         pars=np.concatenate((mu, ex, chol_pars))
         args=y,x
-        
+
         llhmult.llhFctX(pars, *args)
-        
+
         # Optimisation
         resX=opt.minimize(llhmult.llhFctX, pars, args=args, method=m)
-        
+
         # Information Criteria
         aicX,bicX,hqicX=llhmult.InfoCrit(pars,y,resX.fun)
-        
+
         # ===== Exogenous AR multivariate likelihood = #
         pars=np.concatenate((mu, ar, ex, chol_pars))
-        
+
         llhmult.llhFctXAR(pars, *args)
-        
+
         # Optimisation
         resXAR=opt.minimize(llhmult.llhFctXAR,pars,args=args,method=m)
-        
+
         aicXAR,bicXAR,hqicXAR=llhmult.InfoCrit(pars,y,resXAR.fun)
-        
+
         # ===== Summary statistics ================== #
-        dic={'Normal':  [resN.fun,aicN,bicN,hqicN], 
+        dic={'Normal':  [resN.fun,aicN,bicN,hqicN],
              'AR(1)' :  [resAR.fun,aicAR,bicAR,hqicAR],
              'Exog.' :  [resX.fun,aicX,bicX,hqicX],
              'AR(1), Exog.' :   [resXAR.fun,aicXAR,bicXAR,hqicXAR]}
         idx=['Likelihood Value','AIC','BIC','HQIC']
-        
+
         return pd.DataFrame(data=dic,index=idx)
-    
+
     def ultimateWealth(self,weight):
         # Cannot be 100 pct. in all assets
         # weight = self.mk_weights()
         w=weight
-        
+
         # Compounded risk free rate; decimal representation
         c_rf = w[len(w)-1] * np.exp(np.sum(self.rf/100))
-        
+
         # Compounded risky rate (non-excess); decimal representation
         c_risky = w[:len(w)-1] * np.exp(np.sum(self.monthlyRets/100))
-        
+
         # Add the two compounded returns to final wealth
         wealth = c_rf + c_risky.sum()
         return wealth
-    
+
     def hyperbolicUtility(self,weight,gamma):
         wealth = self.ultimateWealth(weight)
         utility = wealth**(1-gamma)/(1-gamma)
         return -utility
-    
+
     def quadraticUtility(self,weight,gamma):
         wealth=self.ultimateWealth(weight)
         utility=wealth-gamma/2*wealth**2
         return -utility
-    
+
     def optUtility(self,gamma,f):
         w = self.mk_weights(a=self.assets+1) # incl. risk free
         # e.g. f = hyperbolicUtility(weight,gamma)
         result=opt.minimize(f,w,args=gamma)
         return result
-    
+
     def constrainedOptUtility(self,gamma,f):
         a = self.assets + 1
         w = self.mk_weights(a=a) # incl. risk free
@@ -318,7 +319,7 @@ class portfolio:
         args=gamma
         res=opt.minimize(f,w,args=args,bounds=bnds,constraints=cons)
         return res
-    
+
     def simulate_model(
         self,states=2,sims=50000,mat=360,start=1,
         mu=mr.mu,cov=mr.cov,probs=mr.probs
@@ -327,7 +328,7 @@ class portfolio:
         self.sim_returns,self.sim_states=ssr.returnSim(
             states,sims,1,self.assets,start,mu,cov,probs,mat,u
         )
-    
+
     def simulate_optimal_weights(self,rf=0.3,g=5.):
         a=self.assets+1
         w=np.random.random(a)
@@ -339,9 +340,9 @@ class portfolio:
         self.opt_sim_weights=np.squeeze(list(zip(
             [np.repeat(w[i],len(self.maturities)) for i in range(len(w))]
         ))).T
-        
+
         R = [self.sim_returns[:,:,:mat] for mat in self.maturities]
-        
+
         #for g in gamma:
         for i,mat in enumerate(self.maturities):
             args=R[i],rf,g,self.assets,mat
@@ -350,7 +351,7 @@ class portfolio:
             )
             self.opt_sim_weights[i]=results.x
         self.plot_simulate_optimal_weights()
-    
+
     def plot_simulate_optimal_weights(self):
         labels=np.array(['hy','ig','cm','r2','r1','rf'])
         for i,lbl in enumerate(labels):
@@ -368,7 +369,8 @@ class portfolio:
 pf = portfolio()
 pf.simulate_model()
 pf.simulate_optimal_weights()
-
+pf.simulate_model(start=2)
+pf.simulate_optimal_weights()
 
 pf.market_pf_split_cons()
 pf.optimal_sr_allocation
@@ -426,4 +428,3 @@ test.idxmax(axis=1)
 
 pf.pf_weights_table
 """
-
