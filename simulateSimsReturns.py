@@ -95,9 +95,11 @@ def returnSim(S, M, N, A, start, mu, cov, probs, T, u, seed=12345):
         returns = np.ones((M*N, A, T))
         for m in range(M):
             for n in range(N):
-                for s in range(S):
-                    returns[m*N + n, :, states[m] == s + 1] = \
-                        np.random.multivariate_normal(mu[:, s], cov[s], int(freq[m, s]))
+                for t in range(T):
+                    returns[m*N + n, :, t] = \
+                        np.random.multivariate_normal(
+                            mu[:, s], cov[s], int(freq[m, s])
+                        )
     else:
         returns = np.ones((M*N, T))
         for m in range(M):
@@ -105,6 +107,58 @@ def returnSim(S, M, N, A, start, mu, cov, probs, T, u, seed=12345):
                 for s in range(S):
                     returns[m*N + n, states[m] == s + 1] = \
                         np.random.normal(mu[s], cov[s], int(freq[m, s]))
+    return returns, states
+
+
+@jit
+def returnARSim(S, M, N, A, start, mu, ar, cov, probs, T, u, seed=12345):
+    """
+    Produces
+    ---------------------------------
+    Simulates M*N matrices (AxT) of return processes for each
+    asset for a lenght of time T;
+    Return processes for risky assets are generated
+    by multivariate normal distribution
+
+    Inputs
+    ---------------------------------
+    S:     Scalar indicating amount of states
+    M:     Scalar indicating amount of state path simulations
+    N:     Scalar indicating amount of return simulations
+    A:     Scalar indicating amount of risky assets
+    start: Scalar indicating initial state to simulate from (state, not index)
+    ar:    (A x S) matrix of AR(1) coefficients (i.e. no cross-autocorrelation)
+    mu:    (A x S) matrix of returns for each asset in each state
+    cov:   (S x (A x A)) set of covariance matrices for all states
+    probs: (S x S) Transition probability matrix
+    T:     Scalar simulation length, e.g. T = 12 months
+    u:     (M x T) matrix of random uniform numbers between 0 and 1
+
+    Returns
+    ---------------------------------
+    returns:  (M*N x A x T) M*N simulated returns of length T for A assets
+    states:   (M x T) M simulated paths of length T
+    """
+    np.random.seed(seed)
+    states, freq = stateSim(S, M, start, probs, T, u)
+    if A > 1:
+        returns = np.ones((M*N, A, T))
+        for m in range(M):
+            for n in range(N):
+                for t in range(T-1):
+                    s = int(states[m*N+n, t] - 1)  # state index
+                    mean = mu[:, s] + ar[:, s] * returns[m*N+n, :, t]
+                    returns[m*N + n, :, t+1] = \
+                        np.random.multivariate_normal(mean, cov[s])
+    else:
+        returns = np.ones((M*N, T))
+        for m in range(M):
+            for n in range(N):
+                for t in range(T-1):
+                    s = int(states[m*N + n, t] - 1)
+                    mean = mu[s] + ar[s] * returns[m*N + n, t]
+                    returns[m*N + n, t+1] = \
+                        np.random.normal(mean, cov[s])
     return returns, states
 
 

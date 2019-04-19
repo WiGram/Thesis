@@ -7,6 +7,8 @@ import llhTestOnReturnSeriesMult as llhm
 import simulateSimsReturns as ssr
 import matlab_results as mr
 import matlab_3_results as mr3
+import matlab_results_ar as mrar
+import matlab_3_results_ar as mr3ar
 import constrainedOptimiser as copt
 import expectedUtility947 as eu
 import matplotlib.pyplot as plt
@@ -362,32 +364,63 @@ class portfolio:
 
     def simulate_model(
         self, states=2, sims=50000, mat=360, start=1,
-        mu=mr.mu, cov=mr.cov, probs=mr.probs
+        mu=mr.mu, cov=mr.cov, probs=mr.probs, ar=False
     ):
-        if states == 3:
-            mu = mr3.mu
-            cov = mr3.cov
-            probs = mr3.probs
-
         u = np.random.uniform(size=(sims, mat))
-        sim_returns, sim_states = ssr.returnSim(
-            states, sims, 1, self.assets, start, mu, cov, probs, mat, u
-        )
 
-        self.sim_returns[
-            'States={}'.format(states)
-        ][
-            'Start={}'.format(start)
-        ] = sim_returns
+        if not ar:
+            if states == 3:
+                mu = mr3.mu
+                cov = mr3.cov
+                probs = mr3.probs
 
-        self.sim_states[
-            'States={}'.format(states)
-        ][
-            'Start={}'.format(start)
-        ] = sim_states
+            sim_returns, sim_states = ssr.returnSim(
+                states, sims, 1, self.assets, start, mu, cov, probs, mat, u
+            )
+
+            self.sim_returns[
+                'States={}'.format(states)
+            ][
+                'Start={}'.format(start)
+            ] = sim_returns
+
+            self.sim_states[
+                'States={}'.format(states)
+            ][
+                'Start={}'.format(start)
+            ] = sim_states
+
+        else:
+            if states == 3:
+                mu = mr3ar.mu
+                cov = mr3ar.cov
+                ar = mr3ar.ar
+                probs = mr3ar.probs
+            else:
+                mu = mrar.mu
+                cov = mrar.cov
+                ar = mrar.ar
+                probs = mrar.probs
+
+            sim_returns, sim_states = ssr.returnARSim(
+                states, sims, 1, self.assets, start,
+                mu, ar, cov, probs, mat, u
+            )
+
+            self.sim_returns[
+                'States={}'.format(states)
+            ][
+                'Start={}'.format(start)
+            ] = sim_returns
+
+            self.sim_states[
+                'States={}'.format(states)
+            ][
+                'Start={}'.format(start)
+            ] = sim_states
 
     def sim_opt_weights(
-        self, rf=0.3, g=5., bnd=True,
+        self, rf=0.3, g=5., bnd=True, ar=False,
         states=2, sims=80000, mat=360, start=1,
         mu=mr.mu, cov=mr.cov, probs=mr.probs
     ):
@@ -400,7 +433,7 @@ class portfolio:
         except KeyError:
             self.simulate_model(
                 states=states, sims=sims, mat=mat, start=start,
-                mu=mr.mu, cov=mr.cov, probs=mr.probs
+                mu=mr.mu, cov=mr.cov, probs=mr.probs, ar=ar
             )
             rets = self.sim_returns[
                 'States={}'.format(states)
@@ -565,12 +598,14 @@ class portfolio:
 pf = portfolio()
 
 gamma = [3.0, 5.0, 7.0, 9.0]
-
 start_states = [1, 2, 3]
 gam_list = ['gamma={}'.format(i) for i in gamma]
+
 for s in start_states:
     for g in gamma:
-        pf.sim_opt_weights(sims=100000, states=3, start=s, g=g, rf=0.3)
+        pf.sim_opt_weights(
+            sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+        )
 
 # Extend labels with Risk Free rate
 assets = np.hstack((pf.colNames, 'Risk Free'))
