@@ -601,11 +601,69 @@ gamma = [3.0, 5.0, 7.0, 9.0]
 start_states = [1, 2, 3]
 gam_list = ['gamma={}'.format(i) for i in gamma]
 
-for s in start_states:
-    for g in gamma:
-        pf.sim_opt_weights(
-            sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
-        )
+s = start_states[0]
+g = gamma[0]
+pf.sim_opt_weights(
+    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+)
+
+g = gamma[1]
+pf.sim_opt_weights(
+    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+)
+
+g = gamma[2]
+pf.sim_opt_weights(
+    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+)
+
+g = gamma[3]
+pf.sim_opt_weights(
+    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+)
+
+s = start_states[1]
+g = gamma[0]
+pf.sim_opt_weights(
+    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+)
+
+g = gamma[1]
+pf.sim_opt_weights(
+    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+)
+
+g = gamma[2]
+pf.sim_opt_weights(
+    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+)
+
+g = gamma[3]
+pf.sim_opt_weights(
+    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+)
+
+s = start_states[2]
+g = gamma[0]
+pf.sim_opt_weights(
+    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+)
+
+g = gamma[1]
+pf.sim_opt_weights(
+    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+)
+
+g = gamma[2]
+pf.sim_opt_weights(
+    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+)
+
+g = gamma[3]
+pf.sim_opt_weights(
+    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+)
+
 
 # Extend labels with Risk Free rate
 assets = np.hstack((pf.colNames, 'Risk Free'))
@@ -614,9 +672,12 @@ assets = np.hstack((pf.colNames, 'Risk Free'))
 colors = np.array(['blue', 'green', 'red', 'black'])
 
 # Separate starting states 1 and 2
-weights1 = pf.opt_weights_bounded['States=3']['Start=1']['rf=0.3']
-weights2 = pf.opt_weights_bounded['States=3']['Start=2']['rf=0.3']
-weights3 = pf.opt_weights_bounded['States=3']['Start=3']['rf=0.3']
+# weights1 = pf.opt_weights_bounded['States=2']['Start=1']['rf=0.3']
+# weights2 = pf.opt_weights_bounded['States=2']['Start=2']['rf=0.3']
+
+weights3 = pf.opt_weights_bounded['States=3']['Start=1']['rf=0.3']
+weights4 = pf.opt_weights_bounded['States=3']['Start=2']['rf=0.3']
+weights5 = pf.opt_weights_bounded['States=3']['Start=3']['rf=0.3']
 
 # Plot everything together - slightly overkill
 fig, axes = plt.subplots(
@@ -624,17 +685,17 @@ fig, axes = plt.subplots(
 )
 for ax, l in zip(axes.flat, assets):
     ax.set_title(l)
-    weights1[l].plot(
+    weights3[l].plot(
         legend=True, ax=ax, color=colors, linewidth=0.8
     )
-    weights2[l].plot(
+    weights4[l].plot(
         legend=False, ax=ax, color=colors, linewidth=0.8, linestyle='dashed'
     )
-    weights3[l].plot(
-        legend=False, ax=ax, color=colors, linewidth=0.8, linestyle='dotted'
+    weights5[l].plot(
+        legend=False, ax=ax, color=colors, linewidth=0.8, linestyle='dashed'
     )
 plt.savefig(
-        'C:/Users/willi/Dropbox/Thesis/Plots/all_allocations_3_r3.png',
+        'C:/Users/willi/Dropbox/Thesis/Plots/all_allocations_3_r3_ar.png',
         bbox_inches='tight',
         pad_inches=0
 )
@@ -648,24 +709,24 @@ for l in assets:
     ax1.set_title('{}: start state is {}'.format(l, 1))
     ax2.set_title('{}: start state is {}'.format(l, 2))
     ax3.set_title('{}: start state is {}'.format(l, 3))
-    weights1[l].plot(
+    weights3[l].plot(
         legend=True, ax=ax1, color=colors, linewidth=0.8, ylim=(0, 1)
     )
-    weights2[l].plot(
+    weights4[l].plot(
         legend=True, ax=ax2, color=colors, linewidth=0.8, ylim=(0, 1)
     )
-    weights3[l].plot(
+    weights5[l].plot(
         legend=True, ax=ax3, color=colors, linewidth=0.8, ylim=(0, 1)
     )
     plt.savefig(
-        'C:/Users/willi/Dropbox/Thesis/Plots/3states_{}_r3.png'.format(l),
+        'C:/Users/willi/Dropbox/Thesis/Plots/'
+        '3states_{}_r3_ar.png'.format(l),
         bbox_inches='tight',
         pad_inches=0
     )
     plt.show()
 
 
-pf.opt_weights_bounded['States=3']['Start=1']['rf=0.3'].keys()
 """
 import pickle
 f = open("file.pkl", "wb")
