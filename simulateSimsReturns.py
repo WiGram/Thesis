@@ -110,7 +110,6 @@ def returnSim(S, M, N, A, start, mu, cov, probs, T, u, seed=12345):
     return returns, states
 
 
-@jit
 def returnSimUniMix(S, SPs, N, start, V, M, AR, C, P, T, paths, seed=12345):
     """
     Produces
@@ -152,29 +151,37 @@ def returnSimUniMix(S, SPs, N, start, V, M, AR, C, P, T, paths, seed=12345):
     returns:  (M*N x A x T) M*N simulated returns of length T for A assets
     """
     keys = list(M.keys())
-    k = keys[0]
     A = len(keys)
     np.random.seed(seed)
     returns = np.zeros((SPs*N, A, T))
     corrections = 0
+    # m = n = t = 0
+    # k = keys[0]
     for m in range(SPs):
         for n in range(N):
             for t in range(T-1):
+                C_ = C.copy()
                 var = [V[k][int(paths[k][m*N+n, t]-1)] for k in keys]
-                C[np.diag_indices_from(C)] = var
-                if np.any(np.linalg.eigvals(C) < 0):
-                    eigen_values, eigen_vector = np.linalg.eig(C)
+                C_[np.diag_indices_from(C_)] = var
+                if np.any(np.linalg.eigvals(C_) < 0):
+                    eigen_values, eigen_vector = np.linalg.eig(C_)
                     eigen_values[eigen_values < 0] = 0.0001
                     D = np.diag(eigen_values)
-                    C = np.round(eigen_vector @ D @ eigen_vector.T, 4)
+                    C_ = eigen_vector @ D @ eigen_vector.T
                     corrections += 1
-                ar = [AR[k][int(paths[k][m*N+n, t]-1)] for k in keys]
                 mu = [M[k][int(paths[k][m*N+n, t]-1)] for k in keys]
+                ar = [AR[k][int(paths[k][m*N+n, t]-1)] for k in keys]
                 mean = mu + ar * returns[m*N+n, :, t]
                 returns[m*N + n, :, t+1] = \
-                    np.random.multivariate_normal(mean, C)
+                    np.random.multivariate_normal(mean, C_)
+            mu = [returns[m*N+n, i, :].mean() for i in range(A)]
+            returns[m*N+n, :, 0] = np.random.multivariate_normal(
+                mu, C
+            )
     print(corrections)
     return returns
+
+
 
 @jit
 def returnARSim(S, M, N, A, start, mu, ar, cov, probs, T, u, seed=12345):
@@ -208,9 +215,12 @@ def returnARSim(S, M, N, A, start, mu, ar, cov, probs, T, u, seed=12345):
     np.random.seed(seed)
     states, freq = stateSim(S, M, start, probs, T, u)
     if A > 1:
-        returns = np.zeros((M*N, A, T))
+        returns = np.ones((M*N, A, T))
         for m in range(M):
             for n in range(N):
+                returns[m*N+n, 0] = np.random.multivariate_normal(
+                    mu[:, 0], cov[0]
+                )
                 for t in range(T-1):
                     s = int(states[m*N+n, t] - 1)  # state index
                     mean = mu[:, s] + ar[:, s] * returns[m*N+n, :, t]
@@ -220,6 +230,9 @@ def returnARSim(S, M, N, A, start, mu, ar, cov, probs, T, u, seed=12345):
         returns = np.zeros((M*N, T))
         for m in range(M):
             for n in range(N):
+                returns[m*N+n, 0] = np.random.multivariate_normal(
+                    mu[0], cov[0]
+                )
                 for t in range(T-1):
                     s = int(states[m*N + n, t] - 1)
                     mean = mu[s] + ar[s] * returns[m*N + n, t]
