@@ -128,4 +128,6 @@ def plot_moments(mu, cov, labels, idx, states):
     )
     plt.show()
 
-plot_moments(mu, cov, labels, idx, states)
+
+if __name__ == '__main__':
+    plot_moments(mu, cov, labels, idx, states)

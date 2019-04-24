@@ -6,6 +6,9 @@ Subject: Choosing optimal portfolio weights
 Description:
 We intend to find portfolio weights from a CRRA quadratic
 utility function.
+
+Last update:
+April 23rd, 2019
 """
 
 import numpy as np
@@ -110,7 +113,10 @@ def returnSim(S, M, N, A, start, mu, cov, probs, T, u, seed=12345):
     return returns, states
 
 
-def returnSimUniMix(S, SPs, N, start, V, M, AR, C, P, T, paths, seed=12345):
+@jit
+def returnSimUniMix(
+    S, SPs, N, start, V, M, MU, AR, C, P, T, paths, seed=12345
+):
     """
     Produces
     ---------------------------------
@@ -140,6 +146,7 @@ def returnSimUniMix(S, SPs, N, start, V, M, AR, C, P, T, paths, seed=12345):
     start: Scalar indicating initial state to simulate from (state, not index)
     V:     (A x S) State switching variances
     M:     (A x S) matrix of returns for each asset in each state
+    MU:    (A x 1) State invariant mean (observed historical mean)
     AR:    (A x S) matrix of autoregressive coefs for each asset and state
     C:     (A x A) State invariant (i.e. static) covariance matrix
     P:     (A x (S x S)) Transition probability matrices for each asset
@@ -159,9 +166,19 @@ def returnSimUniMix(S, SPs, N, start, V, M, AR, C, P, T, paths, seed=12345):
     # k = keys[0]
     for m in range(SPs):
         for n in range(N):
+            returns[m*N+n, :, 0] = np.random.multivariate_normal(
+                MU, C
+            )
             for t in range(T-1):
                 C_ = C.copy()
-                var = [V[k][int(paths[k][m*N+n, t]-1)] for k in keys]
+                var = np.zeros(A)
+                mu = np.zeros(A)
+                ar = np.zeros(A)
+                for i, k in enumerate(keys):
+                    var[i] = V[k][int(paths[k][m*N+n, t]-1)]
+                    mu[i] = M[k][int(paths[k][m*N+n, t]-1)]
+                    ar[i] = AR[k][int(paths[k][m*N+n, t]-1)]
+                mean = mu + ar * returns[m*N+n, :, t]
                 C_[np.diag_indices_from(C_)] = var
                 if np.any(np.linalg.eigvals(C_) < 0):
                     eigen_values, eigen_vector = np.linalg.eig(C_)
@@ -169,18 +186,10 @@ def returnSimUniMix(S, SPs, N, start, V, M, AR, C, P, T, paths, seed=12345):
                     D = np.diag(eigen_values)
                     C_ = eigen_vector @ D @ eigen_vector.T
                     corrections += 1
-                mu = [M[k][int(paths[k][m*N+n, t]-1)] for k in keys]
-                ar = [AR[k][int(paths[k][m*N+n, t]-1)] for k in keys]
-                mean = mu + ar * returns[m*N+n, :, t]
                 returns[m*N + n, :, t+1] = \
                     np.random.multivariate_normal(mean, C_)
-            mu = [returns[m*N+n, i, :].mean() for i in range(A)]
-            returns[m*N+n, :, 0] = np.random.multivariate_normal(
-                mu, C
-            )
     print(corrections)
     return returns
-
 
 
 @jit

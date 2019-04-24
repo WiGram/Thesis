@@ -1,4 +1,4 @@
-""" 
+"""
 Date:    March 27th, 2019
 Authors: Kristian Strand and William Gram
 Subject: Constrained optimiser for portfolio weights between 0 and 1.
@@ -30,23 +30,25 @@ scipy.optimize as opt
 import numpy as np
 from scipy import optimize as opt
 
-def check_sum(weights):
-        '''
-        Produces:
-        -------------------------
-        Returns 0 if individual weights sum to 1.0
-        
-        Motivation:
-        -------------------------
-        Applied as a constraint for opt.minimize.
-        '''
-        return np.sum(weights) - 1.0
 
-def boundedOptimiser(f, w, args, ApB, method = 'SLSQP'):
+def check_sum(weights):
+    '''
+    Produces:
+    -------------------------
+    Returns 0 if individual weights sum to 1.0
+
+    Motivation:
+    -------------------------
+    Applied as a constraint for opt.minimize.
+    '''
+    return np.sum(weights) - 1.0
+
+
+def boundedOptimiser(f, w, args, ApB, method='SLSQP'):
     """
     Constrained optimiser: weights are between 0 and 1.
     Default method set to 'SLSQP' as optimisation is constrained.
-    
+
     Argmunets:
     -------------------------
     f       function to enter into optimiser
@@ -55,28 +57,33 @@ def boundedOptimiser(f, w, args, ApB, method = 'SLSQP'):
     ApB     amount of assets incl. bank - necessary for bounds on weights
     method  SLSQP unless otherwise specified.
     """
-    
-    bnds=tuple(zip(np.zeros(ApB),np.ones(ApB)))
-    cons=({'type':'eq','fun': check_sum})
-    res=opt.minimize(f,w,args=args,bounds=bnds,constraints=cons,method=method)
+
+    bnds = tuple(zip(np.zeros(ApB), np.ones(ApB)))
+    cons = ({'type': 'eq', 'fun': check_sum})
+    res = opt.minimize(
+        f, w, args=args, bounds=bnds, constraints=cons, method=method
+    )
     return res
 
+
 def expUtil(w, returns, gamma):
-    W = w * np.exp(np.sum(returns, axis = 0))
+    W = w * np.exp(np.sum(returns, axis=0))
     utility = np.sum(W) ** (1 - gamma)/(1-gamma)
     return - utility
 
-def expUtil2(w,returns):
-    W = w * np.exp(np.sum(returns, axis = 0))
+
+def expUtil2(w, returns):
+    W = w * np.exp(np.sum(returns, axis=0))
     W = np.sum(W)
     utility = W - 0.5 * W ** 2
     return -utility
 
-def unboundedOptimiser(f, w, args, ApB, method = 'SLSQP'):
+
+def unboundedOptimiser(f, w, args, ApB, method='SLSQP'):
     """
     Constrained optimiser: weights must sum to 1, but are unbounded.
     Default method set to 'SLSQP' as optimisation is constrained.
-    
+
     Argmunets:
     -------------------------
     f       function to enter into optimiser
@@ -85,8 +92,7 @@ def unboundedOptimiser(f, w, args, ApB, method = 'SLSQP'):
     ApB     amount of assets incl. bank - necessary for bounds on weights
     method  SLSQP unless otherwise specified.
     """
-    
-    cons=({'type':'eq','fun': check_sum})
-    res=opt.minimize(f,w,args=args,constraints=cons,method=method)
-    return res
 
+    cons = ({'type': 'eq', 'fun': check_sum})
+    res = opt.minimize(f, w, args=args, constraints=cons, method=method)
+    return res

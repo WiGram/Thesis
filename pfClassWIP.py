@@ -9,6 +9,7 @@ import matlab_results as mr
 import matlab_3_results as mr3
 import matlab_results_ar as mrar
 import matlab_3_results_ar as mr3ar
+import matlab_uni_results as mur
 import constrainedOptimiser as copt
 import expectedUtility947 as eu
 import matplotlib.pyplot as plt
@@ -72,8 +73,11 @@ class portfolio:
 
         self.utility_table = self.__utility_fcts()
 
-        self.sim_returns = {'States=2': {}, 'States=3': {}}
         self.sim_states = {'States=2': {}, 'States=3': {}}
+        self.sim_returns = {'States=2': {}, 'States=3': {}}
+
+        self.sim_uni_states = {}
+        self.sim_uni_returns = {}
 
         self.opt_weights_unbounded = {
             'States=2': {
@@ -96,6 +100,11 @@ class portfolio:
                 'Start=2': {},
                 'Start=3': {}
             }
+        }
+
+        self.opt_uni_weights_bounded = {
+            'Start=1': {},
+            'Start=2': {}
         }
 
     def __optimal_sr_allocation(self):
@@ -419,9 +428,103 @@ class portfolio:
                 'Start={}'.format(start)
             ] = sim_states
 
+    def simulate_uni_model(
+        self, SPs=80000, T=120, start=1
+    ):
+        atts = mur.return_attributes()
+        M, AR, V, C, P = atts.values()
+        MU = self.mean_excess/12
+        N = 1
+        keys = list(M.keys())
+        S = len(list(M.values())[0])
+        T = 120
+        start = 1
+        u = np.random.uniform(0, 1, (SPs, T))
+
+        paths = {}
+        for k in keys:
+            paths[k], _ = ssr.stateSim(S, SPs, start, P[k], T, u, seed=12345)
+
+        self.sim_uni_states['Start={}'.format(start)] = paths
+        self.sim_uni_returns['Start={}'.format(start)] = ssr.returnSimUniMix(
+            S, SPs, N, start, V, M, MU, AR, C, P, T, paths
+        )
+
+    def sim_uni_opt_weights(
+        self, SPs=80000, start=1, g=5., rf=0.3, T=120
+    ):
+        try:
+            rets = self.sim_uni_returns['Start={}'.format(start)]
+        except KeyError:
+            self.simulate_uni_model(SPs=SPs, T=T, start=start)
+            rets = self.sim_uni_returns[
+                'Start={}'.format(start)
+            ]
+        try:
+            len(self.opt_uni_weights_bounded[
+                'Start={}'.format(start)
+            ][
+                'rf={}'.format(rf)
+            ])
+        except KeyError:
+            self.opt_uni_weights_bounded[
+                'Start={}'.format(start)
+            ][
+                'rf={}'.format(rf)
+            ] = {}
+
+        a = self.assets+1
+        w = np.random.random(a)
+        w /= np.sum(w)
+
+        maturities = np.array([
+            1, 2, 3, 6, 9, 12,
+            15, 18, 21, 24,
+            30, 36, 42, 48,
+            54, 60, 72, 84,
+            96, 108, 120
+        ])
+        # labels=np.array(['hy','ig','cm','r2','r1','rf'])
+        labels = np.hstack((self.colNames, 'Risk Free'))
+        weights = np.squeeze(list(zip(
+            [np.repeat(w[i], len(maturities)) for i in range(len(w))]
+        ))).T
+
+        R = [rets[:, :, :mat] for mat in maturities]
+
+        for i, mat in enumerate(maturities):
+            args = R[i], rf, g, self.assets, mat
+            results = copt.boundedOptimiser(
+                eu.expectedUtilityMult, w, args, a
+            )
+            weights[i] = results.x
+        for i, asset in enumerate(labels):
+            try:
+                self.opt_uni_weights_bounded[
+                    'Start={}'.format(start)
+                ][
+                    'rf={}'.format(rf)
+                ][
+                    asset
+                ][
+                    'gamma={}'.format(g)
+                ] = weights[:, i]
+            except KeyError:
+                self.opt_uni_weights_bounded[
+                    'Start={}'.format(start)
+                ][
+                    'rf={}'.format(rf)
+                ][
+                    asset
+                ] = pd.DataFrame(
+                    weights[:, i],
+                    columns=['gamma={}'.format(g)],
+                    index=maturities
+                )
+
     def sim_opt_weights(
         self, rf=0.3, g=5., bnd=True, ar=False,
-        states=2, sims=80000, mat=360, start=1,
+        states=2, sims=80000, mat=120, start=1,
         mu=mr.mu, cov=mr.cov, probs=mr.probs
     ):
         try:
@@ -597,73 +700,37 @@ class portfolio:
 
 pf = portfolio()
 
+pf.excessMRets.head()/12
+
+pf.excessMRets.head()
+
+import time
+
+t0 = time.time()
+pf.simulate_uni_model(SPs=10000)
+t1 = time.time()
+(t1-t0)/60
+
+plt.plot(pf.sim_uni_returns['Start=1'][:, 4, :].mean(axis=0))
+
 gamma = [3.0, 5.0, 7.0, 9.0]
-start_states = [1, 2, 3]
+start_states = [1, 2]
+# start_states = [1, 2, 3]
 gam_list = ['gamma={}'.format(i) for i in gamma]
 
-s = start_states[0]
-g = gamma[0]
-pf.sim_opt_weights(
-    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
-)
+for s in start_states:
+    for g in gamma:
+        pf.sim_uni_opt_weights(
+            SPs=80000, start=s, g=g, rf=0.3
+        )
 
-g = gamma[1]
-pf.sim_opt_weights(
-    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
-)
-
-g = gamma[2]
-pf.sim_opt_weights(
-    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
-)
-
-g = gamma[3]
-pf.sim_opt_weights(
-    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
-)
-
-s = start_states[1]
-g = gamma[0]
-pf.sim_opt_weights(
-    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
-)
-
-g = gamma[1]
-pf.sim_opt_weights(
-    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
-)
-
-g = gamma[2]
-pf.sim_opt_weights(
-    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
-)
-
-g = gamma[3]
-pf.sim_opt_weights(
-    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
-)
-
-s = start_states[2]
-g = gamma[0]
-pf.sim_opt_weights(
-    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
-)
-
-g = gamma[1]
-pf.sim_opt_weights(
-    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
-)
-
-g = gamma[2]
-pf.sim_opt_weights(
-    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
-)
-
-g = gamma[3]
-pf.sim_opt_weights(
-    sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
-)
-
+"""
+for s in start_states:
+    for g in gamma:
+        pf.sim_opt_weights(
+            sims=100000, states=3, start=s, g=g, rf=0.3, ar=True
+        )
+"""
 
 # Extend labels with Risk Free rate
 assets = np.hstack((pf.colNames, 'Risk Free'))
