@@ -13,6 +13,7 @@ import matlab_uni_results as mur
 import constrainedOptimiser as copt
 import expectedUtility947 as eu
 import matplotlib.pyplot as plt
+import time
 np.set_printoptions(suppress=True)  # scientific non-pandas
 pd.options.display.float_format = '{:.4f}'.format  # scientific pandas
 
@@ -700,11 +701,9 @@ class portfolio:
 
 pf = portfolio()
 
-pf.excessMRets.head()/12
+pf.excessMRets.iloc[412:, :]/12
 
 pf.excessMRets.head()
-
-import time
 
 t0 = time.time()
 pf.simulate_uni_model(SPs=10000)
@@ -759,7 +758,7 @@ for ax, l in zip(axes.flat, assets):
         legend=False, ax=ax, color=colors, linewidth=0.8, linestyle='dashed'
     )
     weights5[l].plot(
-        legend=False, ax=ax, color=colors, linewidth=0.8, linestyle='dashed'
+        legend=False, ax=ax, color=colors, linewidth=0.8, linestyle='dotted'
     )
 plt.savefig(
         'C:/Users/willi/Dropbox/Thesis/Plots/all_allocations_3_r3_ar.png',
