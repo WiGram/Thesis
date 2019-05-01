@@ -368,3 +368,55 @@ rf_data.iloc[366:].plot(ax=ax2)
 plt.show()
 
 pd.options.display.float_format = '{:.4f}'.format
+# Extend table with the risk free rate
+returns_18['RF'] = rf
+CR = np.exp(returns_18).cumprod()
+display(CR.round(4))
+
+print('State is 1, gamma is 3')
+display(ws[1][3])
+
+print('State is 2, gamma is 5')
+display(ws[2][5])
+
+# Out of sample weights: start: 1, gamma: 3, maturity: 60
+oos_gamma = 3
+wealth = {
+    'w1': {},
+    'w2': {}
+}
+
+for s, wi in enumerate(wealth):
+    print('Start is: ', s+1)
+    oos_weights = np.array(ws[s+1][oos_gamma].iloc[8, :])  # idx: 8, month: 60
+    wealth[wi] = oos_weights*CR
+    wealth[wi].plot()
+    wealth[wi].sum(axis=1).plot()
+    plt.show()
+    # wealth at end of period
+
+
+cr = np.exp(np.sum(returns_18, axis=0))
+print(cr)
+
+wr = oos_weights*cr
+print(wr)
+
+print('Compounded wealth is: ', np.sum(wr))
+print('Corresponding utility is: ', np.sum(wr)**(1-oos_gamma)/(1-oos_gamma))
+
+
+ep.roll_max_drawdown(CR['High Yield'], 6)
+pf.plot_drawdown_periods(returns_18['High Yield'])
+
+fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(15, 10))
+for i, ax in enumerate(axes.flat):
+    pf.plot_drawdown_periods(returns_18.iloc[:, i], ax=ax)
+plt.plot()
+
+fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(15, 10))
+for i, ax in enumerate(axes.flat):
+    pf.plot_drawdown_underwater(returns_18.iloc[:, i], ax=ax)
+plt.plot()
+
+help(pf.plot_drawdown_periods)
